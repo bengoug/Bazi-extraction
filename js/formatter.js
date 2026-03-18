@@ -9,63 +9,61 @@ const Formatter = (() => {
   const CSS = `
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap');
 
+    * { box-sizing: border-box; }
+
     body {
-      font-family: 'Noto Sans', 'Segoe UI', Tahoma, sans-serif;
-      max-width: 960px;
+      font-family: 'Noto Sans', 'Segoe UI', sans-serif;
+      max-width: 860px;
       margin: 0 auto;
-      padding: 30px 24px;
-      background: #faf9f7;
-      color: #1a202c;
-      line-height: 1.7;
+      padding: 40px 28px;
+      background: #fff;
+      color: #1a1a1a;
+      line-height: 1.8;
+      font-size: 15px;
     }
 
     /* Title */
     .main-title {
-      text-align: center;
-      color: #2c5282;
-      font-size: 1.8rem;
-      margin-bottom: 4px;
-      border-bottom: 3px solid #d4a373;
-      padding-bottom: 14px;
+      font-size: 1.9rem;
+      color: #1a1a1a;
+      margin-bottom: 2px;
+      font-weight: 700;
     }
     .main-subtitle {
-      text-align: center;
-      color: #718096;
       font-size: 1rem;
+      color: #666;
       margin-bottom: 30px;
     }
 
-    /* Phase headers */
+    /* Phase headers (h2 style) */
     .phase-header {
-      margin-top: 40px;
-      padding: 12px 18px;
-      background: linear-gradient(135deg, #2c5282, #1a365d);
-      color: white;
-      font-size: 1.15rem;
+      font-size: 1.3rem;
+      color: #1a1a1a;
+      margin-top: 50px;
+      margin-bottom: 20px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e0e0e0;
       font-weight: 700;
-      border-radius: 8px;
-      letter-spacing: 0.5px;
     }
     .phase-header small {
       font-weight: 400;
-      opacity: 0.8;
+      color: #888;
       font-size: 0.85rem;
     }
 
     /* Section headers */
     h3 {
-      color: #2c5282;
       font-size: 1.05rem;
-      margin-top: 24px;
-      margin-bottom: 10px;
-      padding-bottom: 4px;
-      border-bottom: 2px solid #d4a373;
+      color: #333;
+      margin-top: 28px;
+      margin-bottom: 12px;
+      font-weight: 700;
     }
 
     /* Separator */
     .phase-divider {
       border: none;
-      border-top: 2px dashed #d4a373;
+      border-top: 1px solid #e0e0e0;
       margin: 36px 0;
     }
 
@@ -73,44 +71,42 @@ const Formatter = (() => {
     table {
       border-collapse: collapse;
       width: 100%;
-      margin: 12px 0 20px 0;
+      margin: 16px 0 20px 0;
       font-size: 0.9rem;
     }
     th {
-      background: #2c5282;
-      color: white;
-      padding: 10px 12px;
+      background: #f5f5f5;
+      color: #333;
+      padding: 10px 14px;
       text-align: left;
-      font-size: 0.85rem;
-      font-weight: 600;
+      font-weight: 700;
+      border-bottom: 2px solid #ddd;
     }
     td {
-      border: 1px solid #e2e8f0;
-      padding: 8px 12px;
-      font-size: 0.88rem;
+      padding: 9px 14px;
+      border-bottom: 1px solid #eee;
       vertical-align: top;
     }
-    tr:nth-child(even) {
-      background: #f7fafc;
+    tr:hover td {
+      background: #fafafa;
     }
 
     /* Key-value table */
     .kv-table td:first-child {
       font-weight: 600;
-      background: #edf2f7;
       width: 220px;
-      color: #2d3748;
+      color: #333;
     }
 
     /* Element colors */
-    .feu { color: #e53e3e; font-weight: 600; }
-    .bois { color: #38a169; font-weight: 600; }
-    .eau { color: #3182ce; font-weight: 600; }
-    .metal { color: #d69e2e; font-weight: 600; }
-    .terre { color: #8b6914; font-weight: 600; }
+    .feu { color: #d32f2f; font-weight: 600; }
+    .bois { color: #2e7d32; font-weight: 600; }
+    .eau { color: #1565c0; font-weight: 600; }
+    .metal { color: #f9a825; font-weight: 600; }
+    .terre { color: #8d6e63; font-weight: 600; }
 
     /* MV highlight */
-    .mv { background: #fed7d7 !important; }
+    .mv { background: #ffebee !important; }
 
     /* Badges */
     .badge {
@@ -120,10 +116,10 @@ const Formatter = (() => {
       font-size: 0.78rem;
       font-weight: 600;
     }
-    .badge-fav { background: #c6f6d5; color: #22543d; }
-    .badge-def { background: #fed7d7; color: #742a2a; }
-    .badge-mv { background: #fed7d7; color: #742a2a; }
-    .badge-phase { background: #ebf8ff; color: #2c5282; }
+    .badge-fav { background: #e8f5e9; color: #1b5e20; }
+    .badge-def { background: #ffebee; color: #b71c1c; }
+    .badge-mv { background: #ffebee; color: #c62828; font-size: 0.8rem; }
+    .badge-phase { background: #e3f2fd; color: #1565c0; }
 
     /* Pillar cards */
     .pillar-grid {
@@ -133,20 +129,19 @@ const Formatter = (() => {
       margin: 14px 0;
     }
     .pillar-card {
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
       padding: 12px;
       text-align: center;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
     .pillar-card.mv-card {
-      border-color: #e53e3e;
+      border-color: #d32f2f;
       background: #fff5f5;
     }
     .pillar-card-title {
       font-weight: 700;
-      color: #2c5282;
+      color: #333;
       font-size: 0.82rem;
       margin-bottom: 8px;
       text-transform: uppercase;
@@ -163,7 +158,7 @@ const Formatter = (() => {
     }
     .pillar-detail {
       font-size: 0.78rem;
-      color: #718096;
+      color: #666;
       margin-top: 4px;
     }
 
@@ -183,7 +178,6 @@ const Formatter = (() => {
       height: 20px;
       border-radius: 4px;
       min-width: 4px;
-      transition: width 0.3s;
     }
     .element-bar-pct {
       font-size: 0.85rem;
@@ -199,24 +193,23 @@ const Formatter = (() => {
       margin: 14px 0;
     }
     .stars-card {
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
       padding: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
     .stars-card-title {
       font-weight: 700;
-      color: #2c5282;
+      color: #333;
       font-size: 0.82rem;
       margin-bottom: 8px;
-      border-bottom: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e0e0e0;
       padding-bottom: 6px;
     }
     .star-item {
       font-size: 0.85rem;
       padding: 2px 0;
-      color: #4a5568;
+      color: #555;
     }
 
     /* Luck pillar timeline */
@@ -227,27 +220,25 @@ const Formatter = (() => {
       margin: 14px 0;
     }
     .lp-card {
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
       padding: 10px;
       text-align: center;
       font-size: 0.85rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
     .lp-card.lp-current {
       border-color: #d4a373;
       background: #fffaf0;
-      box-shadow: 0 2px 8px rgba(212,163,115,0.3);
     }
     .lp-age {
       font-weight: 700;
-      color: #2c5282;
+      color: #1a1a1a;
       font-size: 1rem;
     }
     .lp-period {
       font-size: 0.78rem;
-      color: #718096;
+      color: #888;
     }
     .lp-trunk {
       font-weight: 600;
@@ -262,9 +253,9 @@ const Formatter = (() => {
       margin: 14px 0;
     }
     .dir-section {
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
       padding: 14px;
     }
     .dir-section-title {
@@ -272,14 +263,14 @@ const Formatter = (() => {
       font-size: 0.92rem;
       margin-bottom: 10px;
     }
-    .dir-section-title.fav { color: #38a169; }
-    .dir-section-title.def { color: #e53e3e; }
+    .dir-section-title.fav { color: #2e7d32; }
+    .dir-section-title.def { color: #d32f2f; }
     .dir-item {
       display: flex;
       justify-content: space-between;
       padding: 4px 0;
       font-size: 0.88rem;
-      border-bottom: 1px solid #f7fafc;
+      border-bottom: 1px solid #f5f5f5;
     }
 
     /* Hexagram display */
@@ -290,34 +281,33 @@ const Formatter = (() => {
       margin: 14px 0;
     }
     .hex-card {
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
       padding: 10px;
       text-align: center;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
     .hex-pillar {
       font-size: 0.78rem;
-      color: #718096;
+      color: #888;
       font-weight: 600;
       text-transform: uppercase;
     }
     .hex-number {
       font-size: 1.4rem;
       font-weight: 700;
-      color: #2c5282;
+      color: #1a1a1a;
     }
     .hex-name {
       font-size: 0.88rem;
-      color: #4a5568;
+      color: #555;
       margin-top: 2px;
     }
 
     /* Note */
     .note {
       font-size: 0.85rem;
-      color: #718096;
+      color: #888;
       font-style: italic;
       margin: 8px 0;
     }
@@ -325,16 +315,16 @@ const Formatter = (() => {
     /* Footer */
     .generated {
       text-align: center;
-      color: #a0aec0;
-      font-size: 0.8rem;
-      margin-top: 50px;
+      color: #aaa;
+      font-size: 0.82rem;
+      margin-top: 60px;
       padding-top: 20px;
-      border-top: 1px solid #e2e8f0;
+      border-top: 1px solid #eee;
     }
 
     /* Print / responsive */
     @media print {
-      body { background: white; }
+      body { padding: 20px; font-size: 13px; }
       .phase-header { break-before: page; }
     }
     @media (max-width: 600px) {
@@ -555,7 +545,7 @@ const Formatter = (() => {
       html += `<td>${esc(a.nomCn)}</td>`;
       html += `<td>${esc(a.tronc)}</td>`;
       html += `<td><strong>${a.score}</strong></td>`;
-      html += `<td><div style="background:#2c5282;height:14px;width:${barWidth}%;border-radius:3px;min-width:2px;"></div></td>`;
+      html += `<td><div style="background:#555;height:14px;width:${barWidth}%;border-radius:3px;min-width:2px;"></div></td>`;
       html += '</tr>';
     }
     html += '</tbody></table>';
@@ -839,7 +829,7 @@ const Formatter = (() => {
   <style>${CSS}</style>
 </head>
 <body>
-<div class="main-title">Analyse BaZi — ${esc(personName)}</div>
+<h1 class="main-title">Analyse BaZi — ${esc(personName)}</h1>
 <div class="main-subtitle">Charte Id ${esc(data.blocA?.['Charte Id'] || '—')} — 8 phases</div>
 `;
 
