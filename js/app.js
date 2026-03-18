@@ -38,6 +38,7 @@
   const btnExtract = $('#btn-extract');
   const btnDownload = $('#btn-download');
   const btnStore = $('#btn-store');
+  const btnDiagnose = $('#btn-diagnose');
   const uploadStatus = $('#upload-status');
 
   const previewArea = $('#preview-area');
@@ -135,6 +136,7 @@
       currentFile = { name: file.name, content: e.target.result };
       fileNameDisplay.textContent = file.name;
       btnExtract.disabled = false;
+      btnDiagnose.disabled = false;
       currentExtraction = null;
       extractionHtml = null;
       btnDownload.disabled = true;
@@ -434,6 +436,105 @@
   }
 
   // =====================
+  // DIAGNOSTIC
+  // =====================
+  function doDiagnose() {
+    if (!currentFile) return;
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(currentFile.content, 'text/html');
+
+    const tables = doc.querySelectorAll('table');
+    let report = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+      body{font-family:monospace;font-size:13px;max-width:1200px;margin:0 auto;padding:20px;background:#1a1a1a;color:#e0e0e0;}
+      h1{color:#4fc3f7;}h2{color:#81c784;margin-top:30px;}h3{color:#ffb74d;}
+      table{border-collapse:collapse;width:100%;margin:8px 0 20px;}
+      th{background:#333;color:#fff;padding:6px 8px;text-align:left;font-size:12px;border:1px solid #555;}
+      td{padding:5px 8px;border:1px solid #444;font-size:12px;max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+      tr:nth-child(even){background:#252525;}
+      .tag{color:#ce93d8;}.attr{color:#80cbc4;}.text{color:#fff59d;}
+      .truncated{color:#ef9a9a;font-style:italic;}
+      pre{background:#222;padding:10px;border-radius:4px;overflow-x:auto;max-height:300px;overflow-y:auto;}
+    </style></head><body>`;
+
+    report += `<h1>Diagnostic HTML — ${esc(currentFile.name)}</h1>`;
+    report += `<p>Tables trouvées : <strong>${tables.length}</strong></p>`;
+
+    // Show all IDs and classes on major elements
+    const allDivs = doc.querySelectorAll('div[id], div[class], section[id], section[class]');
+    report += `<h2>Structure des divs/sections principales</h2>`;
+    report += `<pre>`;
+    for (const div of allDivs) {
+      const id = div.id ? ` id="${div.id}"` : '';
+      const cls = div.className ? ` class="${div.className}"` : '';
+      const childTables = div.querySelectorAll(':scope > table').length;
+      const textPreview = div.textContent.trim().substring(0, 80).replace(/\s+/g, ' ');
+      report += `&lt;div${id}${cls}&gt; [${childTables} tables] "${textPreview}..."\n`;
+    }
+    report += `</pre>`;
+
+    // Detail each table
+    for (let t = 0; t < tables.length; t++) {
+      const table = tables[t];
+      const rows = table.querySelectorAll('tr');
+      const id = table.id ? ` id="${table.id}"` : '';
+      const cls = table.className ? ` class="${table.className}"` : '';
+
+      report += `<h2>Table ${t + 1}/${tables.length}${id}${cls}</h2>`;
+      report += `<p>Lignes: ${rows.length}</p>`;
+
+      // Show first 15 rows max
+      const maxRows = Math.min(rows.length, 15);
+      report += `<table>`;
+
+      for (let r = 0; r < maxRows; r++) {
+        const cells = rows[r].querySelectorAll('td, th');
+        const tag = rows[r].querySelector('th') ? 'HEADER' : `Row ${r}`;
+
+        report += `<tr><td style="background:#333;color:#4fc3f7;"><strong>${tag}</strong></td>`;
+        for (let c = 0; c < cells.length; c++) {
+          const cell = cells[c];
+          const isHeader = cell.tagName === 'TH';
+          const cellText = cell.textContent.trim().substring(0, 100).replace(/\s+/g, ' ');
+          const hasImg = cell.querySelector('img') ? ' [IMG]' : '';
+          const colspan = cell.colSpan > 1 ? ` colspan=${cell.colSpan}` : '';
+          const rowspan = cell.rowSpan > 1 ? ` rowspan=${cell.rowSpan}` : '';
+          const cellCls = cell.className ? ` class="${cell.className}"` : '';
+          const style = isHeader ? 'background:#2e3b4e;' : '';
+
+          report += `<td style="${style}"${colspan}${rowspan}>`;
+          if (hasImg) report += `<span class="tag">[IMG: ${cell.querySelector('img').getAttribute('src')?.split('/').pop() || '?'}]</span> `;
+          report += `${cellText.length >= 100 ? '<span class="truncated">' + cellText + '…</span>' : cellText}`;
+          if (cellCls) report += ` <span class="attr">${cellCls}</span>`;
+          report += `</td>`;
+        }
+        report += `</tr>`;
+      }
+
+      if (rows.length > maxRows) {
+        report += `<tr><td colspan="20" class="truncated">... ${rows.length - maxRows} lignes supplémentaires ...</td></tr>`;
+      }
+
+      report += `</table>`;
+    }
+
+    // Show raw HTML structure (first 5000 chars)
+    report += `<h2>HTML brut (premiers 5000 caractères)</h2>`;
+    const rawHtml = currentFile.content.substring(0, 5000)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    report += `<pre>${rawHtml}</pre>`;
+
+    report += `</body></html>`;
+
+    // Show in preview
+    previewArea.classList.add('visible');
+    const blob = new Blob([report], { type: 'text/html' });
+    previewFrame.src = URL.createObjectURL(blob);
+
+    showStatus(uploadStatus, 'Diagnostic généré. Consultez l\'aperçu ci-dessous.', 'info');
+  }
+
+  // =====================
   // UI HELPERS
   // =====================
   function showStatus(el, msg, type) {
@@ -540,6 +641,7 @@
     btnExtract.addEventListener('click', doExtract);
     btnDownload.addEventListener('click', doDownload);
     btnStore.addEventListener('click', doStore);
+    btnDiagnose.addEventListener('click', doDiagnose);
     btnRefreshFiles.addEventListener('click', loadFiles);
 
     // Close modal on overlay click
