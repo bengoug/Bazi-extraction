@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Template Extraction BaZi — Preview</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans', 'Segoe UI', sans-serif;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 40px 28px;
+      background: #fff;
+      color: #1a1a1a;
+      line-height: 1.8;
+      font-size: 15px;
+    }
+
+    /* ===== TITRE ===== */
+    h1 {
+      font-size: 1.9rem;
+      color: #1a1a1a;
+      margin-bottom: 2px;
+      font-weight: 700;
+    }
+    .subtitle {
+      font-size: 1rem;
+      color: #666;
+      margin-bottom: 30px;
+    }
+
+    /* ===== PHASE (h2) ===== */
+    h2 {
+      font-size: 1.3rem;
+      color: #1a1a1a;
+      margin-top: 50px;
+      margin-bottom: 20px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e0e0e0;
+      font-weight: 700;
+    }
+
+    /* ===== SOUS-SECTIONS (h3) ===== */
+    h3 {
+      font-size: 1.05rem;
+      color: #333;
+      margin-top: 28px;
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+
+    /* ===== PARAGRAPHES ===== */
+    p {
+      margin-bottom: 14px;
+    }
+
+    /* ===== SÉPARATEUR ===== */
+    hr {
+      border: none;
+      border-top: 1px solid #e0e0e0;
+      margin: 36px 0;
+    }
+
+    /* ===== GRAS & ITALIQUE ===== */
+    strong { font-weight: 700; }
+
+    /* ===== LISTES ===== */
+    ul, ol {
+      margin: 10px 0 14px 24px;
+    }
+    li {
+      margin-bottom: 4px;
+    }
+
+    /* ===== TABLEAUX ===== */
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 16px 0 20px 0;
+      font-size: 0.9rem;
+    }
+    th {
+      background: #f5f5f5;
+      color: #333;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 700;
+      border-bottom: 2px solid #ddd;
+    }
+    td {
+      padding: 9px 14px;
+      border-bottom: 1px solid #eee;
+      vertical-align: top;
+    }
+    tr:hover td {
+      background: #fafafa;
+    }
+
+    /* ===== ENCART "POUR [PRENOM]" ===== */
+    .encart-personnel {
+      background: #f8f8f8;
+      border-left: 4px solid #d4a373;
+      padding: 16px 20px;
+      margin: 24px 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .encart-personnel p {
+      margin-bottom: 8px;
+    }
+    .encart-personnel p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ===== BADGES ÉLÉMENTS ===== */
+    .el-feu { color: #d32f2f; }
+    .el-bois { color: #2e7d32; }
+    .el-eau { color: #1565c0; }
+    .el-metal { color: #f9a825; }
+    .el-terre { color: #8d6e63; }
+
+    /* ===== BADGE MV ===== */
+    .badge-mv {
+      background: #ffebee;
+      color: #c62828;
+      padding: 1px 8px;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    /* ===== SYNTHÈSE FINALE ===== */
+    .synthese h3 {
+      margin-top: 20px;
+    }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      text-align: center;
+      color: #aaa;
+      font-size: 0.82rem;
+      margin-top: 60px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+
+    /* ===== PRINT ===== */
+    @media print {
+      body { padding: 20px; font-size: 13px; }
+      h2 { break-before: page; }
+      .encart-personnel { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============================== -->
+<!-- EXEMPLE : REPRODUCTION EXACTE  -->
+<!-- DU FORMAT ANALYSE VICTOIRE     -->
+<!-- ============================== -->
+
+<h1>Analyse BaZi — Victoire</h1>
+<div class="subtitle">Charte Id 100985 — 8 phases</div>
+
+<hr>
+
+<h2>PHASE 1 — CONTEXTE (Blocs A + B)</h2>
+
+<h3>Cadre de la lecture</h3>
+
+<p>Victoire est une femme de 30 ans, née un mercredi à Londres. Le mercredi est le jour de Mercure — associé à la communication et à l'intelligence analytique. Ce cadre est pertinent pour la lecture : nous sommes face à une femme jeune, en pleine phase d'affirmation professionnelle et personnelle.</p>
+
+<h3>Heure solaire et décalage</h3>
+
+<p>L'heure locale de 08h39 subit une correction totale de <strong>-1h05</strong> pour arriver à l'heure solaire de <strong>07h34</strong>. Ce décalage est très significatif :</p>
+
+<ul>
+  <li>DST (heure d'été britannique, août 1995) : <strong>-01:00:00</strong> — c'est le facteur dominant</li>
+  <li>Équation de l'heure : -00:04:10</li>
+  <li>Geo compensation : -00:00:30</li>
+</ul>
+
+<p>L'heure solaire de 07h34 place la naissance dans le <strong>créneau du Dragon (辰 Chén, 07h00–09h00)</strong>.</p>
+
+<h3>Position saisonnière — Jie Qi</h3>
+
+<p>Victoire est née dans le <strong>13e Jie Qi : Arrivée de l'automne (立秋 Lì Qiū)</strong>, le segment qui va du 7 août au 23 août 1995.</p>
+
+<hr>
+
+<div class="encart-personnel">
+  <p><strong>Pour Victoire</strong> : Vous êtes née au tout début de l'automne, un moment de transition où l'énergie change de direction. Cette position saisonnière a une influence directe sur votre tempérament : vous portez en vous l'écho de l'été qui s'achève — la chaleur, la générosité — mais votre énergie naturelle est tournée vers la production et le don, parfois au détriment de vos propres réserves.</p>
+</div>
+
+<hr>
+
+<h2>PHASE 2 — CŒUR DU THÈME (Blocs C + H)</h2>
+
+<h3>Le Maître du Jour : 己 Jǐ — Terre Yin</h3>
+
+<p>Le Maître du Jour est la pièce centrale de toute la charte. Victoire est un <strong>己 Jǐ — Terre Yin</strong>.</p>
+
+<p>Le 己 Jǐ est naturellement :</p>
+<ul>
+  <li><strong>Accueillant et nourricier</strong> — la terre qui donne sans compter</li>
+  <li><strong>Adaptable</strong> — le jardin se transforme selon les saisons</li>
+  <li><strong>Patient</strong> — la croissance prend du temps, 己 le sait</li>
+  <li><strong>Discret</strong> — pas d'éclat ostentatoire, mais une solidité tranquille</li>
+  <li><strong>Vulnérable à l'épuisement</strong> — si on prend sans redonner, la terre s'appauvrit</li>
+</ul>
+
+<h3>Force du Maître du Jour : TRÈS FAIBLE</h3>
+
+<table>
+  <thead>
+    <tr><th>Indicateur</th><th>Valeur</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Score fortifiant</td><td>25%</td></tr>
+    <tr><td>Score affaiblissant</td><td>75%</td></tr>
+    <tr><td>Par saison</td><td>Faible (Automne)</td></tr>
+    <tr><td>Diagnostic logiciel</td><td>Faiblesse extrême ou fausse Faiblesse extrême</td></tr>
+  </tbody>
+</table>
+
+<h3>Lecture des 6 Piliers</h3>
+
+<p><strong>Pilier de l'Heure (戊辰 Wù Chén) — Monde intérieur, enfants, vieillesse</strong></p>
+<ul>
+  <li>Tronc : 戊 Wù, <span class="el-terre">Terre Yang (VR)</span> — le seul vrai soutien du MJ</li>
+  <li>Branche : 辰 Chén, Dragon, Terre Yang, phase Affaibli</li>
+  <li>Troncs cachés : 癸 RI / 戊 VR / 乙 7K</li>
+  <li>NaYin : Bois de la forêt</li>
+</ul>
+
+<p><strong>Pilier du Mois (甲申 Jiǎ Shēn) — Carrière, parents</strong></p>
+<ul>
+  <li>Tronc : 甲 Jiǎ, <span class="el-bois">Bois Yang (DO)</span></li>
+  <li>Branche : 申 Shēn, Singe, Métal Yang — <span class="badge-mv">EN MORT ET VIDE</span></li>
+</ul>
+
+<h3>Mort et Vide (MV) : 申 Shēn / 酉 Yǒu</h3>
+
+<ul>
+  <li><strong>申 Shēn = branche du Mois</strong> → la carrière et l'environnement social sont en MV</li>
+  <li><strong>酉 Yǒu = Intelligence</strong> → l'étoile d'Intelligence est en MV</li>
+</ul>
+
+<hr>
+
+<div class="encart-personnel">
+  <p><strong>Pour Victoire</strong> : Vous êtes comme un jardin fertile qui manque cruellement de soleil et de pluie. Votre nature profonde est accueillante et nourricière. Ce qui vous manque le plus, c'est la chaleur — le Feu, le soutien. La bonne nouvelle : ce Feu est inscrit dans votre Palais de Vie. Il est là, latent, attendant d'être activé.</p>
+</div>
+
+<hr>
+
+<h2>PHASE 3 — QUANTITATIF (Blocs I + J + K)</h2>
+
+<h3>Force des 10 Aspects</h3>
+
+<p><strong>Trio dominant :</strong></p>
+<ol>
+  <li><strong>VR 29</strong> (Voleur de Richesse / 劫财) — Plus forte valeur</li>
+  <li><strong>RD 22</strong> (Richesse Directe / 正财)</li>
+  <li><strong>7K 21</strong> (Sept Tueurs / 七刹)</li>
+</ol>
+
+<p><strong>Triple zéro :</strong></p>
+<ul>
+  <li><strong><span class="el-feu">ReD 0</span></strong> (Ressource Directe) — Zéro. Absence totale de protection</li>
+  <li><strong><span class="el-feu">ReI 0</span></strong> (Ressource Indirecte) — Zéro</li>
+  <li><strong>DV 0</strong> (Dieu Vorace) — Zéro</li>
+</ul>
+
+<h3>Cinq Éléments</h3>
+
+<table>
+  <thead>
+    <tr><th>Élément</th><th>Rôle</th><th>%</th><th>Lecture</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><span class="el-bois">🟢 Bois</span></td><td>Influence</td><td><strong>34%</strong></td><td>Domine la charte — pression constante sur le MJ</td></tr>
+    <tr><td><span class="el-terre">🟤 Terre</span></td><td>Compagnon</td><td><strong>25%</strong></td><td>Insuffisant pour résister à 34% de Bois</td></tr>
+    <tr><td><span class="el-eau">🔵 Eau</span></td><td>Richesse</td><td><strong>21%</strong></td><td>Draine la Terre, nourrit le Bois ennemi</td></tr>
+    <tr><td><span class="el-metal">🟡 Métal</span></td><td>Productions</td><td><strong>20%</strong></td><td>Extrait de la Terre</td></tr>
+    <tr><td><span class="el-feu">🔴 Feu</span></td><td>Ressource</td><td><strong>0%</strong></td><td>ABSENT — la faille majeure du thème</td></tr>
+  </tbody>
+</table>
+
+<h3>Structure &amp; Éléments Bon/Mauvais</h3>
+
+<p><strong>Structure : Standard — Voleur de Richesse (VR)</strong></p>
+
+<ul>
+  <li>Bon : <span class="el-terre">🟤 Terre</span>, <span class="el-feu">🔴 Feu</span></li>
+  <li>Mauvais : <span class="el-bois">🟢 Bois</span>, <span class="el-eau">🔵 Eau</span>, <span class="el-metal">🟡 Métal</span></li>
+</ul>
+
+<hr>
+
+<h2>PHASE 4 — DYNAMIQUE (Blocs E + D)</h2>
+
+<h3>Relations entre branches — Charte natale</h3>
+
+<p><strong>Préjudice (Hai 害) systématique :</strong></p>
+<ul>
+  <li>H↔J : Heure-Jour (辰-卯) — tension constante entre le monde intérieur et le soi</li>
+  <li>M↔A : Mois-Année (申-亥) — tension entre la carrière et la société</li>
+</ul>
+
+<h3>Étoiles auxiliaires</h3>
+
+<p><strong>Pilier de l'Heure (monde intérieur) :</strong></p>
+<ul>
+  <li><strong>Bienfaiteur Tai Ji</strong> (太极贵人) — Intelligence métaphysique</li>
+  <li><strong>Entremetteur Rouge</strong> (红鸾) — Chance en amour</li>
+  <li><strong>Chambre Rouge</strong> (红艳) — Passions intenses, magnétisme</li>
+</ul>
+
+<p><strong>Pilier du Mois (carrière) :</strong></p>
+<ul>
+  <li><strong>Double Noble</strong> (天乙贵人 × 2) — Protection maximale</li>
+  <li><strong>Chariot en Or</strong> (金舆) — Richesse, succès professionnel</li>
+</ul>
+
+<hr>
+
+<h2>PHASE 5 — YI JING (Blocs F + G)</h2>
+
+<h3>Hexagrammes par pilier</h3>
+
+<table>
+  <thead>
+    <tr><th>Pilier</th><th>Hex.</th><th>Nom</th><th>Image</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Heure</td><td><strong>10 — Lǚ 履</strong></td><td>Pas</td><td>Marcher sur la queue du tigre</td></tr>
+    <tr><td>Jour</td><td><strong>60 — Jié 節</strong></td><td>Régule</td><td>La régulation, la mesure</td></tr>
+    <tr><td>Mois</td><td><strong>64 — Wèi Jì 未濟</strong></td><td>Pas encore accompli</td><td>Le gué pas encore traversé</td></tr>
+    <tr><td>Année</td><td><strong>35 — Jìn 晋</strong></td><td>Avancement</td><td>Le soleil qui monte</td></tr>
+    <tr><td>Palais de vie</td><td><strong>14 — Dà Yǒu 大有</strong></td><td>Grande Récompense</td><td>Le feu au sommet du ciel</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2>PHASE 6 — TEMPORALITÉ DÉCENNALE (Blocs L + M + N + O)</h2>
+
+<h3>Vue d'ensemble des Piliers de Chance</h3>
+
+<table>
+  <thead>
+    <tr><th>Âge</th><th>Pilier</th><th>Élément dominant</th><th>Phase</th><th>Évaluation</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>8</strong></td><td>乙酉 Yǐ Yǒu</td><td>Bois + Métal MV</td><td>Croissance MV</td><td>Difficile — 7K + MV</td></tr>
+    <tr><td><strong>18</strong></td><td>丙戌 Bǐng Xū</td><td><span class="el-feu">Feu + Terre</span></td><td>Développement</td><td><strong>Meilleur PC</strong> — le Soleil arrive</td></tr>
+    <tr><td><strong>28</strong></td><td>丁亥 Dīng Hài</td><td>Feu + Eau</td><td>Conçu</td><td>Mixte — Feu en tronc mais Eau en branche</td></tr>
+    <tr><td><strong>38</strong></td><td>戊子 Wù Zǐ</td><td>Terre + Eau</td><td>Disparu</td><td>Mixte</td></tr>
+    <tr><td><strong>48</strong></td><td>己丑 Jǐ Chǒu</td><td><span class="el-terre">Terre + Terre</span></td><td>Enterré</td><td>Bon — double Terre</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2>PHASE 7 — TEMPORALITÉ ANNUELLE (Bloc P)</h2>
+
+<h3>Focus sur le PC actuel (28–38, 丁亥 2023–2033)</h3>
+
+<table>
+  <thead>
+    <tr><th>#</th><th>Année</th><th>Pilier</th><th>Évaluation rapide</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>2023</td><td>癸卯 Guǐ Mǎo</td><td>RI + 7K — miroir du natal</td></tr>
+    <tr><td>2</td><td>2024</td><td>甲辰 Jiǎ Chén</td><td>DO + Terre — plutôt favorable</td></tr>
+    <tr><td>3</td><td>2025</td><td>乙巳 Yǐ Sì</td><td>7K + Feu — pression mais Feu caché</td></tr>
+    <tr><td><strong>4</strong></td><td><strong>2026</strong></td><td><strong>丙午 Bǐng Wǔ</strong></td><td><strong><span class="el-feu">Meilleure année du cycle</span> — double Dieu Utile</strong></td></tr>
+    <tr><td>5</td><td>2027</td><td>丁未 Dīng Wèi</td><td>ReI + Terre — favorable</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2>PHASE 8 — SYSTÈMES COMPLÉMENTAIRES (Blocs Q + R)</h2>
+
+<h3>Ba Zhai (8 Demeures)</h3>
+
+<p><strong>Directions favorables :</strong></p>
+<ol>
+  <li><strong>SE</strong> — Sheng Qi (Générateur de vie) — direction optimale</li>
+  <li><strong>E</strong> — Tian Yi (Docteur Céleste) — santé</li>
+  <li><strong>S</strong> — Yan Nian (Longévité) — relations</li>
+  <li><strong>N</strong> — Fu Wei (Stabilité) — repos</li>
+</ol>
+
+<h3>Qi Men Dun Jia (Palais de Destinée)</h3>
+
+<table>
+  <thead>
+    <tr><th>Champ</th><th>Valeur</th><th>Lecture</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Direction</td><td><strong>Sud</strong></td><td>Cohérent avec Ba Zhai</td></tr>
+    <tr><td>Tronc de vie</td><td>己 (Jǐ)</td><td>Identique au MJ</td></tr>
+    <tr><td>Étoile de Destinée</td><td><strong>Héros</strong> (英)</td><td>Énergie combative, courage</td></tr>
+    <tr><td>Porte de la Destinée</td><td><strong>Mort</strong> (死门)</td><td>Transformation, fin nécessaire pour renouveau</td></tr>
+    <tr><td>Gardien de la Destinée</td><td><strong>Tigre</strong> (白虎)</td><td>Énergie tranchante, décisive</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<div class="encart-personnel">
+  <p><strong>Pour Victoire</strong> : Orientez votre espace de vie et de travail vers le <strong>Sud-Est</strong> (votre direction la plus puissante). Votre profil QMDJ vous décrit comme une Héroïne — quelqu'un qui a le courage de traverser les transformations nécessaires.</p>
+</div>
+
+<hr>
+
+<h2>SYNTHÈSE FINALE</h2>
+
+<h3>1. Portrait</h3>
+<p>Victoire est une <strong>Terre Yin (己 Jǐ) très faible</strong> — un jardin fertile mais desséché, né au début de l'automne à Londres.</p>
+
+<h3>2. Forces</h3>
+<ul>
+  <li><strong>Double Noble en carrière</strong> — protection exceptionnelle</li>
+  <li><strong>Étoile du Général</strong> — leadership inné</li>
+  <li><strong>Hexagramme #14 (Grande Récompense) au Palais de vie</strong></li>
+  <li><strong>Magnétisme romantique</strong> (Chambre Rouge + Entremetteur Rouge)</li>
+</ul>
+
+<h3>3. Défis</h3>
+<ul>
+  <li><span class="el-feu"><strong>Feu à 0%</strong></span> — absence totale de Ressource</li>
+  <li>MJ à 25% — faiblesse sévère</li>
+  <li>Mois en MV — carrière fragilisée</li>
+  <li>7K en branche du Jour — sphère conjugale sous pression</li>
+</ul>
+
+<h3>4. Timing</h3>
+<ul>
+  <li><strong>PC 18–28</strong> (2013–2023) : la meilleure décennie — le soleil brillait</li>
+  <li><strong>PC 28–38</strong> (2023–2033) : période actuelle, transitoire. Année clé : <strong>2026 (丙午)</strong></li>
+  <li><strong>PC 48–58</strong> (2043–2053) : consolidation terreuse, ancrage</li>
+</ul>
+
+<h3>5. Recommandations</h3>
+<ul>
+  <li><strong><span class="el-feu">Feu</span></strong> (prioritaire) : couleurs rouges, oranges ; activités au soleil ; cuisiner</li>
+  <li><strong><span class="el-terre">Terre</span></strong> (secondaire) : couleurs jaunes, ocres ; jardinage</li>
+  <li><strong>Direction optimale</strong> : Sud-Est (Sheng Qi)</li>
+</ul>
+
+<div class="footer">
+  Généré par BaZi Manager — Template v1.0
+</div>
+
+</body>
+</html>
