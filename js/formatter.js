@@ -1,32 +1,347 @@
 /**
- * formatter.js — Génère le HTML d'extraction formaté (fichier autonome)
+ * formatter.js — Génère le HTML d'extraction formaté en 8 phases
+ * Layout basé sur le modèle d'analyse BaZi professionnel
  */
 
 const Formatter = (() => {
   'use strict';
 
   const CSS = `
-    body { font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 900px; margin: auto; padding: 20px; background: #fafafa; color: #1a202c; }
-    h1 { color: #2c5282; text-align: center; border-bottom: 3px solid #d4a373; padding-bottom: 12px; }
-    h2 { color: #2c5282; border-bottom: 2px solid #d4a373; padding: 6px 0; margin-top: 28px; }
-    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-    th { background: #2c5282; color: white; padding: 8px 10px; text-align: left; font-size: 0.9rem; }
-    td { border: 1px solid #ddd; padding: 6px 10px; font-size: 0.9rem; }
-    tr:nth-child(even) { background: #f7fafc; }
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+
+    body {
+      font-family: 'Noto Sans', 'Segoe UI', Tahoma, sans-serif;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 30px 24px;
+      background: #faf9f7;
+      color: #1a202c;
+      line-height: 1.7;
+    }
+
+    /* Title */
+    .main-title {
+      text-align: center;
+      color: #2c5282;
+      font-size: 1.8rem;
+      margin-bottom: 4px;
+      border-bottom: 3px solid #d4a373;
+      padding-bottom: 14px;
+    }
+    .main-subtitle {
+      text-align: center;
+      color: #718096;
+      font-size: 1rem;
+      margin-bottom: 30px;
+    }
+
+    /* Phase headers */
+    .phase-header {
+      margin-top: 40px;
+      padding: 12px 18px;
+      background: linear-gradient(135deg, #2c5282, #1a365d);
+      color: white;
+      font-size: 1.15rem;
+      font-weight: 700;
+      border-radius: 8px;
+      letter-spacing: 0.5px;
+    }
+    .phase-header small {
+      font-weight: 400;
+      opacity: 0.8;
+      font-size: 0.85rem;
+    }
+
+    /* Section headers */
+    h3 {
+      color: #2c5282;
+      font-size: 1.05rem;
+      margin-top: 24px;
+      margin-bottom: 10px;
+      padding-bottom: 4px;
+      border-bottom: 2px solid #d4a373;
+    }
+
+    /* Separator */
+    .phase-divider {
+      border: none;
+      border-top: 2px dashed #d4a373;
+      margin: 36px 0;
+    }
+
+    /* Tables */
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 12px 0 20px 0;
+      font-size: 0.9rem;
+    }
+    th {
+      background: #2c5282;
+      color: white;
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    td {
+      border: 1px solid #e2e8f0;
+      padding: 8px 12px;
+      font-size: 0.88rem;
+      vertical-align: top;
+    }
+    tr:nth-child(even) {
+      background: #f7fafc;
+    }
+
+    /* Key-value table */
+    .kv-table td:first-child {
+      font-weight: 600;
+      background: #edf2f7;
+      width: 220px;
+      color: #2d3748;
+    }
+
+    /* Element colors */
     .feu { color: #e53e3e; font-weight: 600; }
     .bois { color: #38a169; font-weight: 600; }
     .eau { color: #3182ce; font-weight: 600; }
     .metal { color: #d69e2e; font-weight: 600; }
     .terre { color: #8b6914; font-weight: 600; }
-    .mv { background: #fed7d7; }
-    .bloc-header { background: #ebf8ff; padding: 10px 14px; margin-top: 24px; border-left: 4px solid #2c5282; font-size: 1.1rem; font-weight: 600; color: #2c5282; }
-    .kv-table td:first-child { font-weight: 600; background: #edf2f7; width: 220px; }
-    .note { font-size: 0.85rem; color: #718096; margin-top: 4px; font-style: italic; }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 500; }
+
+    /* MV highlight */
+    .mv { background: #fed7d7 !important; }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
     .badge-fav { background: #c6f6d5; color: #22543d; }
     .badge-def { background: #fed7d7; color: #742a2a; }
-    .section-divider { border: none; border-top: 2px dashed #d4a373; margin: 30px 0; }
-    .generated { text-align: center; color: #a0aec0; font-size: 0.8rem; margin-top: 40px; }
+    .badge-mv { background: #fed7d7; color: #742a2a; }
+    .badge-phase { background: #ebf8ff; color: #2c5282; }
+
+    /* Pillar cards */
+    .pillar-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin: 14px 0;
+    }
+    .pillar-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .pillar-card.mv-card {
+      border-color: #e53e3e;
+      background: #fff5f5;
+    }
+    .pillar-card-title {
+      font-weight: 700;
+      color: #2c5282;
+      font-size: 0.82rem;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .pillar-trunk {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .pillar-branch {
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+    .pillar-detail {
+      font-size: 0.78rem;
+      color: #718096;
+      margin-top: 4px;
+    }
+
+    /* Element bars */
+    .element-bar-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 4px 0;
+    }
+    .element-bar-label {
+      min-width: 80px;
+      font-weight: 600;
+      font-size: 0.88rem;
+    }
+    .element-bar {
+      height: 20px;
+      border-radius: 4px;
+      min-width: 4px;
+      transition: width 0.3s;
+    }
+    .element-bar-pct {
+      font-size: 0.85rem;
+      font-weight: 600;
+      min-width: 40px;
+    }
+
+    /* Stars grid */
+    .stars-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin: 14px 0;
+    }
+    .stars-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .stars-card-title {
+      font-weight: 700;
+      color: #2c5282;
+      font-size: 0.82rem;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 6px;
+    }
+    .star-item {
+      font-size: 0.85rem;
+      padding: 2px 0;
+      color: #4a5568;
+    }
+
+    /* Luck pillar timeline */
+    .lp-timeline {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+      margin: 14px 0;
+    }
+    .lp-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      font-size: 0.85rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .lp-card.lp-current {
+      border-color: #d4a373;
+      background: #fffaf0;
+      box-shadow: 0 2px 8px rgba(212,163,115,0.3);
+    }
+    .lp-age {
+      font-weight: 700;
+      color: #2c5282;
+      font-size: 1rem;
+    }
+    .lp-period {
+      font-size: 0.78rem;
+      color: #718096;
+    }
+    .lp-trunk {
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    /* Ba Zhai directions grid */
+    .directions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 14px 0;
+    }
+    .dir-section {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 14px;
+    }
+    .dir-section-title {
+      font-weight: 700;
+      font-size: 0.92rem;
+      margin-bottom: 10px;
+    }
+    .dir-section-title.fav { color: #38a169; }
+    .dir-section-title.def { color: #e53e3e; }
+    .dir-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 0.88rem;
+      border-bottom: 1px solid #f7fafc;
+    }
+
+    /* Hexagram display */
+    .hex-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      margin: 14px 0;
+    }
+    .hex-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .hex-pillar {
+      font-size: 0.78rem;
+      color: #718096;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .hex-number {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #2c5282;
+    }
+    .hex-name {
+      font-size: 0.88rem;
+      color: #4a5568;
+      margin-top: 2px;
+    }
+
+    /* Note */
+    .note {
+      font-size: 0.85rem;
+      color: #718096;
+      font-style: italic;
+      margin: 8px 0;
+    }
+
+    /* Footer */
+    .generated {
+      text-align: center;
+      color: #a0aec0;
+      font-size: 0.8rem;
+      margin-top: 50px;
+      padding-top: 20px;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    /* Print / responsive */
+    @media print {
+      body { background: white; }
+      .phase-header { break-before: page; }
+    }
+    @media (max-width: 600px) {
+      .pillar-grid { grid-template-columns: repeat(3, 1fr); }
+      .stars-grid { grid-template-columns: 1fr; }
+      .directions-grid { grid-template-columns: 1fr; }
+    }
   `;
 
   function esc(str) {
@@ -60,279 +375,6 @@ const Formatter = (() => {
     return '';
   }
 
-  function kvTable(data, title) {
-    if (!data || Object.keys(data).length === 0) return '';
-    let html = `<table class="kv-table"><tbody>`;
-    for (const [key, val] of Object.entries(data)) {
-      if (val === undefined || val === null) continue;
-      const display = typeof val === 'object' ? JSON.stringify(val) : String(val);
-      const cls = elementClass(display);
-      html += `<tr><td>${esc(key)}</td><td class="${cls}">${esc(display)}</td></tr>`;
-    }
-    html += `</tbody></table>`;
-    return html;
-  }
-
-  // =====================
-  // FORMAT BAZI
-  // =====================
-  function formatBaZi(data, personName) {
-    let html = `<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <title>BaZi Extraction — ${esc(personName)}</title>
-  <style>${CSS}</style>
-</head>
-<body>
-<h1>🏯 BaZi Extraction — ${esc(personName)}</h1>
-`;
-
-    // BLOC A
-    html += `<div class="bloc-header">🔷 BLOC A — Détails personnels</div>`;
-    html += kvTable(data.blocA);
-
-    // BLOC B
-    html += `<div class="bloc-header">🔷 BLOC B — Données astro-géographiques</div>`;
-    html += kvTable(data.blocB);
-
-    // BLOC C — 6 Piliers
-    html += `<div class="bloc-header">🔷 BLOC C — Les 6 Piliers</div>`;
-    html += formatPillars(data.blocC);
-
-    // BLOC D — Étoiles auxiliaires
-    html += `<div class="bloc-header">🔷 BLOC D — Étoiles auxiliaires</div>`;
-    html += formatStars(data.blocD);
-
-    // BLOC E — Relations
-    html += `<div class="bloc-header">🔷 BLOC E — Relations entre branches</div>`;
-    html += formatRelations(data.blocE);
-
-    // BLOC F — Hexagrammes
-    html += `<div class="bloc-header">🔷 BLOC F — Hexagrammes</div>`;
-    html += formatHexagrams(data.blocF);
-
-    // BLOC G — Groupe/Gua/Famille/Stratagème
-    html += `<div class="bloc-header">🔷 BLOC G — Groupe / Gua / Famille / Stratagème</div>`;
-    html += formatGroupGua(data.blocG);
-
-    // BLOC H — Base d'analyse
-    html += `<div class="bloc-header">🔷 BLOC H — Base d'analyse</div>`;
-    html += kvTable(data.blocH);
-
-    // BLOC I — 10 Aspects
-    html += `<div class="bloc-header">🔷 BLOC I — 10 Aspects</div>`;
-    html += formatAspects(data.blocI);
-
-    // BLOC J — 5 Éléments
-    html += `<div class="bloc-header">🔷 BLOC J — 5 Éléments</div>`;
-    html += formatElements(data.blocJ);
-
-    // BLOC K — Analyse intermédiaire
-    html += `<div class="bloc-header">🔷 BLOC K — Analyse intermédiaire</div>`;
-    html += kvTable(data.blocK);
-
-    // BLOC L — Piliers de Chance
-    html += `<hr class="section-divider">`;
-    html += `<div class="bloc-header">🔷 BLOC L — Piliers de Chance</div>`;
-    html += formatLuckPillars(data.blocL);
-
-    // BLOC M — Étoiles PC
-    html += `<div class="bloc-header">🔷 BLOC M — Étoiles PC</div>`;
-    html += formatGenericTable(data.blocM);
-
-    // BLOC N — Relations PC
-    html += `<div class="bloc-header">🔷 BLOC N — Relations PC</div>`;
-    html += formatGenericTable(data.blocN);
-
-    // BLOC O — Hexagrammes PC
-    html += `<div class="bloc-header">🔷 BLOC O — Hexagrammes PC</div>`;
-    html += formatGenericTable(data.blocO);
-
-    // BLOC P — Piliers annuels
-    html += `<div class="bloc-header">🔷 BLOC P — Piliers annuels (Liu Nian)</div>`;
-    html += formatGenericTable(data.blocP);
-
-    // BLOC Q — Ba Zhai
-    html += `<hr class="section-divider">`;
-    html += `<div class="bloc-header">🔷 BLOC Q — Ba Zhai (8 Demeures)</div>`;
-    html += formatBaZhai(data.blocQ);
-
-    // BLOC R — QMDJ basique
-    html += `<div class="bloc-header">🔷 BLOC R — Qi Men Dun Jia (basique)</div>`;
-    html += kvTable(data.blocR);
-
-    html += `<p class="generated">Généré par BaZi Manager — ${new Date().toLocaleDateString('fr-FR')}</p>`;
-    html += `</body></html>`;
-
-    return html;
-  }
-
-  function formatPillars(pillars) {
-    if (!pillars || Object.keys(pillars).length === 0) {
-      return `<p class="note">Aucune donnée de pilier extraite.</p>`;
-    }
-
-    const names = ['Heure', 'Jour', 'Mois', 'Année', 'Conception', 'Palais de vie'];
-    let html = `<table><thead><tr><th></th>`;
-    for (const name of names) {
-      html += `<th>${esc(name)}</th>`;
-    }
-    html += `</tr></thead><tbody>`;
-
-    // Tronc
-    html += `<tr><td><strong>Tronc</strong></td>`;
-    for (const name of names) {
-      const p = pillars[name];
-      if (!p) { html += `<td>-</td>`; continue; }
-      const cls = elementClass(p.tronc.element);
-      const emoji = elementEmoji(p.tronc.element);
-      html += `<td class="${cls}">${emoji} ${esc(p.tronc.pinyin)}`;
-      if (p.tronc.element) html += ` <br><small>${esc(p.tronc.element)}</small>`;
-      if (p.tronc.aspect) html += ` <br><strong>${esc(p.tronc.aspect)}</strong>`;
-      html += `</td>`;
-    }
-    html += `</tr>`;
-
-    // Branche
-    html += `<tr><td><strong>Branche</strong></td>`;
-    for (const name of names) {
-      const p = pillars[name];
-      if (!p) { html += `<td>-</td>`; continue; }
-      const cls = elementClass(p.branche.element) + (p.branche.mv ? ' mv' : '');
-      const emoji = elementEmoji(p.branche.element);
-      html += `<td class="${cls}">${emoji} ${esc(p.branche.pinyin)}`;
-      if (p.branche.animal) html += ` (${esc(p.branche.animal)})`;
-      if (p.branche.phaseDeVie) html += `<br><small>${esc(p.branche.phaseDeVie)}</small>`;
-      if (p.branche.mv) html += `<br><span class="badge badge-def">MV</span>`;
-      html += `</td>`;
-    }
-    html += `</tr>`;
-
-    // Troncs cachés
-    html += `<tr><td><strong>Troncs cachés</strong></td>`;
-    for (const name of names) {
-      const p = pillars[name];
-      if (!p) { html += `<td>-</td>`; continue; }
-      html += `<td>${p.troncsCaches.length > 0 ? esc(p.troncsCaches.join(', ')) : '-'}</td>`;
-    }
-    html += `</tr>`;
-
-    // NaYin
-    html += `<tr><td><strong>NaYin</strong></td>`;
-    for (const name of names) {
-      const p = pillars[name];
-      if (!p) { html += `<td>-</td>`; continue; }
-      html += `<td>${esc(p.nayin) || '-'}</td>`;
-    }
-    html += `</tr>`;
-
-    html += `</tbody></table>`;
-    return html;
-  }
-
-  function formatStars(stars) {
-    if (!stars || Object.keys(stars).length === 0) {
-      return `<p class="note">Aucune étoile extraite.</p>`;
-    }
-
-    let html = `<table><thead><tr>`;
-    const names = Object.keys(stars);
-    for (const name of names) {
-      html += `<th>${esc(name)}</th>`;
-    }
-    html += `</tr></thead><tbody><tr>`;
-    for (const name of names) {
-      html += `<td>${stars[name].length > 0 ? stars[name].map(esc).join('<br>') : '-'}</td>`;
-    }
-    html += `</tr></tbody></table>`;
-    return html;
-  }
-
-  function formatRelations(relations) {
-    if (!relations || Object.keys(relations).length === 0) {
-      return `<p class="note">Aucune relation extraite.</p>`;
-    }
-
-    let html = `<table class="kv-table"><tbody>`;
-    for (const [type, values] of Object.entries(relations)) {
-      const display = values.map(v => typeof v === 'object' ? v.text : String(v)).join(', ');
-      html += `<tr><td>${esc(type)}</td><td>${esc(display) || '-'}</td></tr>`;
-    }
-    html += `</tbody></table>`;
-    return html;
-  }
-
-  function formatHexagrams(hexagrams) {
-    if (!hexagrams || Object.keys(hexagrams).length === 0) {
-      return `<p class="note">Aucun hexagramme extrait.</p>`;
-    }
-
-    const names = Object.keys(hexagrams);
-    let html = `<table><thead><tr><th></th>`;
-    for (const name of names) html += `<th>${esc(name)}</th>`;
-    html += `</tr></thead><tbody>`;
-
-    for (const field of ['trigrammeHaut', 'trigrammeBas', 'numero', 'nom']) {
-      const label = { trigrammeHaut: 'Trigramme Haut', trigrammeBas: 'Trigramme Bas', numero: 'Numéro', nom: 'Nom' }[field];
-      html += `<tr><td><strong>${label}</strong></td>`;
-      for (const name of names) {
-        html += `<td>${esc(hexagrams[name][field]) || '-'}</td>`;
-      }
-      html += `</tr>`;
-    }
-    html += `</tbody></table>`;
-    return html;
-  }
-
-  function formatGroupGua(data) {
-    if (!data || Object.keys(data).length === 0) {
-      return `<p class="note">Aucune donnée extraite.</p>`;
-    }
-
-    let html = '';
-    for (const [label, pillarData] of Object.entries(data)) {
-      if (typeof pillarData === 'object') {
-        html += `<h3>${esc(label)}</h3>`;
-        html += `<table><thead><tr>`;
-        for (const name of Object.keys(pillarData)) html += `<th>${esc(name)}</th>`;
-        html += `</tr></thead><tbody><tr>`;
-        for (const val of Object.values(pillarData)) html += `<td>${esc(val) || '-'}</td>`;
-        html += `</tr></tbody></table>`;
-      }
-    }
-    return html || `<p class="note">Aucune donnée extraite.</p>`;
-  }
-
-  function formatAspects(aspects) {
-    if (!aspects || aspects.length === 0) {
-      return `<p class="note">Aucun aspect extrait.</p>`;
-    }
-
-    let html = `<table><thead><tr><th>Code</th><th>Nom (FR)</th><th>Nom (CN)</th><th>Tronc</th><th>Score</th></tr></thead><tbody>`;
-    for (const a of aspects) {
-      html += `<tr><td><strong>${esc(a.code)}</strong></td><td>${esc(a.nomFr)}</td><td>${esc(a.nomCn)}</td><td>${esc(a.tronc)}</td><td>${a.score}</td></tr>`;
-    }
-    html += `</tbody></table>`;
-    return html;
-  }
-
-  function formatElements(elements) {
-    if (!elements || elements.length === 0) {
-      return `<p class="note">Aucun élément extrait.</p>`;
-    }
-
-    let html = `<table><thead><tr><th>Élément</th><th>%</th><th>Barre</th></tr></thead><tbody>`;
-    for (const e of elements) {
-      const cls = elementClass(e.element);
-      const barWidth = Math.min(e.percentage * 3, 100);
-      html += `<tr><td class="${cls}">${e.emoji} ${esc(e.element)}</td><td>${e.percentage}%</td>`;
-      html += `<td><div style="background:${getBarColor(e.element)};height:16px;width:${barWidth}%;border-radius:3px;"></div></td></tr>`;
-    }
-    html += `</tbody></table>`;
-    return html;
-  }
-
   function getBarColor(element) {
     const t = (element || '').toLowerCase();
     if (t.includes('feu')) return '#e53e3e';
@@ -343,179 +385,575 @@ const Formatter = (() => {
     return '#a0aec0';
   }
 
-  function formatLuckPillars(pillars) {
-    if (!pillars || pillars.length === 0) {
-      return `<p class="note">Aucun pilier de chance extrait.</p>`;
+  function kvTable(data) {
+    if (!data || Object.keys(data).length === 0) return '<p class="note">Aucune donnée extraite.</p>';
+    let html = '<table class="kv-table"><tbody>';
+    for (const [key, val] of Object.entries(data)) {
+      if (val === undefined || val === null) continue;
+      const display = typeof val === 'object' ? JSON.stringify(val) : String(val);
+      const cls = elementClass(display);
+      html += `<tr><td>${esc(key)}</td><td class="${cls}">${esc(display)}</td></tr>`;
+    }
+    html += '</tbody></table>';
+    return html;
+  }
+
+  // =====================
+  // PHASE RENDERERS
+  // =====================
+
+  /** PHASE 1 — CONTEXTE (Blocs A + B) */
+  function renderPhase1(data) {
+    let html = `<div class="phase-header">PHASE 1 — CONTEXTE <small>(Blocs A + B)</small></div>`;
+
+    html += `<h3>Cadre de la lecture</h3>`;
+    html += kvTable(data.blocA);
+
+    html += `<h3>Heure solaire et données astro-géographiques</h3>`;
+    html += kvTable(data.blocB);
+
+    return html;
+  }
+
+  /** PHASE 2 — COEUR DU THEME (Blocs C + H) */
+  function renderPhase2(data) {
+    let html = `<div class="phase-header">PHASE 2 — COEUR DU THÈME <small>(Blocs C + H)</small></div>`;
+
+    // Maître du Jour + Force
+    html += `<h3>Maître du Jour &amp; Base d'analyse</h3>`;
+    html += kvTable(data.blocH);
+
+    // 6 Piliers as cards
+    html += `<h3>Les 6 Piliers</h3>`;
+    html += renderPillarCards(data.blocC);
+
+    return html;
+  }
+
+  function renderPillarCards(pillars) {
+    if (!pillars || Object.keys(pillars).length === 0) {
+      return '<p class="note">Aucune donnée de pilier extraite.</p>';
     }
 
-    let html = `<table><thead><tr><th>Âge</th><th>Période</th><th>Tronc</th><th>Branche</th><th>Phase</th><th>Troncs cachés</th><th>NaYin</th></tr></thead><tbody>`;
+    const names = ['Heure', 'Jour', 'Mois', 'Année', 'Conception', 'Palais de vie'];
+    let html = '<div class="pillar-grid">';
+
+    for (const name of names) {
+      const p = pillars[name];
+      if (!p) continue;
+      const isMv = p.branche.mv;
+      const cls = elementClass(p.tronc.element);
+      const emoji = elementEmoji(p.tronc.element);
+
+      html += `<div class="pillar-card${isMv ? ' mv-card' : ''}">`;
+      html += `<div class="pillar-card-title">${esc(name)}</div>`;
+      html += `<div class="pillar-trunk ${cls}">${emoji} ${esc(p.tronc.pinyin)}</div>`;
+      if (p.tronc.element) html += `<div class="pillar-detail">${esc(p.tronc.element)}</div>`;
+      if (p.tronc.aspect) html += `<div class="pillar-detail"><strong>${esc(p.tronc.aspect)}</strong></div>`;
+      html += `<div class="pillar-branch">${esc(p.branche.pinyin)}`;
+      if (p.branche.animal) html += ` (${esc(p.branche.animal)})`;
+      html += `</div>`;
+      if (p.branche.phaseDeVie) html += `<div class="pillar-detail"><span class="badge badge-phase">${esc(p.branche.phaseDeVie)}</span></div>`;
+      if (isMv) html += `<div class="pillar-detail"><span class="badge badge-mv">MV</span></div>`;
+      if (p.troncsCaches.length > 0) html += `<div class="pillar-detail">Cachés: ${esc(p.troncsCaches.join(', '))}</div>`;
+      if (p.nayin) html += `<div class="pillar-detail">NaYin: ${esc(p.nayin)}</div>`;
+      html += `</div>`;
+    }
+
+    html += '</div>';
+
+    // Also render as table for detailed view
+    html += renderPillarTable(pillars);
+    return html;
+  }
+
+  function renderPillarTable(pillars) {
+    const names = ['Heure', 'Jour', 'Mois', 'Année', 'Conception', 'Palais de vie'];
+    let html = '<table><thead><tr><th></th>';
+    for (const name of names) html += `<th>${esc(name)}</th>`;
+    html += '</tr></thead><tbody>';
+
+    // Tronc
+    html += '<tr><td><strong>Tronc</strong></td>';
+    for (const name of names) {
+      const p = pillars[name];
+      if (!p) { html += '<td>-</td>'; continue; }
+      const cls = elementClass(p.tronc.element);
+      const emoji = elementEmoji(p.tronc.element);
+      html += `<td class="${cls}">${emoji} ${esc(p.tronc.pinyin)}`;
+      if (p.tronc.element) html += `<br><small>${esc(p.tronc.element)}</small>`;
+      if (p.tronc.aspect) html += `<br><strong>${esc(p.tronc.aspect)}</strong>`;
+      html += '</td>';
+    }
+    html += '</tr>';
+
+    // Branche
+    html += '<tr><td><strong>Branche</strong></td>';
+    for (const name of names) {
+      const p = pillars[name];
+      if (!p) { html += '<td>-</td>'; continue; }
+      const cls = elementClass(p.branche.element) + (p.branche.mv ? ' mv' : '');
+      html += `<td class="${cls}">${esc(p.branche.pinyin)}`;
+      if (p.branche.animal) html += ` (${esc(p.branche.animal)})`;
+      if (p.branche.phaseDeVie) html += `<br><small>${esc(p.branche.phaseDeVie)}</small>`;
+      if (p.branche.mv) html += `<br><span class="badge badge-mv">MV</span>`;
+      html += '</td>';
+    }
+    html += '</tr>';
+
+    // Troncs cachés
+    html += '<tr><td><strong>Troncs cachés</strong></td>';
+    for (const name of names) {
+      const p = pillars[name];
+      if (!p) { html += '<td>-</td>'; continue; }
+      html += `<td>${p.troncsCaches.length > 0 ? esc(p.troncsCaches.join(', ')) : '-'}</td>`;
+    }
+    html += '</tr>';
+
+    // NaYin
+    html += '<tr><td><strong>NaYin</strong></td>';
+    for (const name of names) {
+      const p = pillars[name];
+      if (!p) { html += '<td>-</td>'; continue; }
+      html += `<td>${esc(p.nayin) || '-'}</td>`;
+    }
+    html += '</tr>';
+
+    html += '</tbody></table>';
+    return html;
+  }
+
+  /** PHASE 3 — QUANTITATIF (Blocs I + J + K) */
+  function renderPhase3(data) {
+    let html = `<div class="phase-header">PHASE 3 — QUANTITATIF <small>(Blocs I + J + K)</small></div>`;
+
+    // 10 Aspects
+    html += `<h3>Force des 10 Aspects</h3>`;
+    html += renderAspects(data.blocI);
+
+    // 5 Elements
+    html += `<h3>5 Éléments</h3>`;
+    html += renderElements(data.blocJ);
+
+    // Analyse intermédiaire
+    html += `<h3>Structure &amp; Analyse intermédiaire</h3>`;
+    html += kvTable(data.blocK);
+
+    return html;
+  }
+
+  function renderAspects(aspects) {
+    if (!aspects || aspects.length === 0) return '<p class="note">Aucun aspect extrait.</p>';
+
+    let html = '<table><thead><tr><th>Code</th><th>Nom (FR)</th><th>Nom (CN)</th><th>Tronc</th><th>Score</th><th></th></tr></thead><tbody>';
+    const maxScore = Math.max(...aspects.map(a => a.score), 1);
+    for (const a of aspects) {
+      const barWidth = Math.round((a.score / maxScore) * 100);
+      html += '<tr>';
+      html += `<td><strong>${esc(a.code)}</strong></td>`;
+      html += `<td>${esc(a.nomFr)}</td>`;
+      html += `<td>${esc(a.nomCn)}</td>`;
+      html += `<td>${esc(a.tronc)}</td>`;
+      html += `<td><strong>${a.score}</strong></td>`;
+      html += `<td><div style="background:#2c5282;height:14px;width:${barWidth}%;border-radius:3px;min-width:2px;"></div></td>`;
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+    return html;
+  }
+
+  function renderElements(elements) {
+    if (!elements || elements.length === 0) return '<p class="note">Aucun élément extrait.</p>';
+
+    let html = '';
+    for (const e of elements) {
+      const color = getBarColor(e.element);
+      const barWidth = Math.min(e.percentage * 3, 100);
+      html += '<div class="element-bar-container">';
+      html += `<div class="element-bar-label" style="color:${color}">${e.emoji} ${esc(e.element)}</div>`;
+      html += `<div style="flex:1;background:#edf2f7;border-radius:4px;overflow:hidden;"><div class="element-bar" style="background:${color};width:${barWidth}%;"></div></div>`;
+      html += `<div class="element-bar-pct" style="color:${color}">${e.percentage}%</div>`;
+      html += '</div>';
+    }
+
+    // Also show as table
+    html += '<table><thead><tr><th>Élément</th><th>Pourcentage</th></tr></thead><tbody>';
+    for (const e of elements) {
+      const cls = elementClass(e.element);
+      html += `<tr><td class="${cls}">${e.emoji} ${esc(e.element)}</td><td><strong>${e.percentage}%</strong></td></tr>`;
+    }
+    html += '</tbody></table>';
+    return html;
+  }
+
+  /** PHASE 4 — DYNAMIQUE (Blocs E + D) */
+  function renderPhase4(data) {
+    let html = `<div class="phase-header">PHASE 4 — DYNAMIQUE <small>(Blocs E + D)</small></div>`;
+
+    // Relations entre branches
+    html += `<h3>Relations entre branches — Charte natale</h3>`;
+    html += renderRelations(data.blocE);
+
+    // Étoiles auxiliaires
+    html += `<h3>Étoiles auxiliaires — Charte natale</h3>`;
+    html += renderStarsCards(data.blocD);
+
+    return html;
+  }
+
+  function renderRelations(relations) {
+    if (!relations || Object.keys(relations).length === 0) return '<p class="note">Aucune relation extraite.</p>';
+
+    let html = '<table class="kv-table"><tbody>';
+    for (const [type, values] of Object.entries(relations)) {
+      if (!values || values.length === 0) {
+        html += `<tr><td>${esc(type)}</td><td class="note">—</td></tr>`;
+        continue;
+      }
+      const display = values.map(v => typeof v === 'object' ? v.text : String(v)).join(', ');
+      html += `<tr><td>${esc(type)}</td><td>${esc(display) || '—'}</td></tr>`;
+    }
+    html += '</tbody></table>';
+    return html;
+  }
+
+  function renderStarsCards(stars) {
+    if (!stars || Object.keys(stars).length === 0) return '<p class="note">Aucune étoile extraite.</p>';
+
+    let html = '<div class="stars-grid">';
+    for (const [pillar, starList] of Object.entries(stars)) {
+      if (!starList || starList.length === 0) continue;
+      html += '<div class="stars-card">';
+      html += `<div class="stars-card-title">${esc(pillar)}</div>`;
+      for (const star of starList) {
+        html += `<div class="star-item">&#9733; ${esc(star)}</div>`;
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+
+    // Empty check
+    const hasAny = Object.values(stars).some(s => s && s.length > 0);
+    if (!hasAny) return '<p class="note">Aucune étoile extraite.</p>';
+
+    return html;
+  }
+
+  /** PHASE 5 — YI JING (Blocs F + G) */
+  function renderPhase5(data) {
+    let html = `<div class="phase-header">PHASE 5 — YI JING <small>(Blocs F + G)</small></div>`;
+
+    // Hexagrammes
+    html += `<h3>Hexagrammes par pilier</h3>`;
+    html += renderHexagrams(data.blocF);
+
+    // Groupe/Gua/Famille/Stratagème
+    html += `<h3>Groupe / Gua / Famille / Stratagème</h3>`;
+    html += renderGroupGua(data.blocG);
+
+    return html;
+  }
+
+  function renderHexagrams(hexagrams) {
+    if (!hexagrams || Object.keys(hexagrams).length === 0) return '<p class="note">Aucun hexagramme extrait.</p>';
+
+    let html = '<div class="hex-grid">';
+    for (const [pillar, hex] of Object.entries(hexagrams)) {
+      html += '<div class="hex-card">';
+      html += `<div class="hex-pillar">${esc(pillar)}</div>`;
+      if (hex.numero) html += `<div class="hex-number">#${esc(hex.numero)}</div>`;
+      if (hex.nom) html += `<div class="hex-name">${esc(hex.nom)}</div>`;
+      if (hex.trigrammeHaut) html += `<div class="pillar-detail">Haut: ${esc(hex.trigrammeHaut)}</div>`;
+      if (hex.trigrammeBas) html += `<div class="pillar-detail">Bas: ${esc(hex.trigrammeBas)}</div>`;
+      html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderGroupGua(data) {
+    if (!data || Object.keys(data).length === 0) return '<p class="note">Aucune donnée extraite.</p>';
+
+    let html = '';
+    for (const [label, pillarData] of Object.entries(data)) {
+      if (typeof pillarData === 'object') {
+        html += `<h4 style="color:#4a5568;margin-top:14px;">${esc(label)}</h4>`;
+        html += '<table><thead><tr>';
+        for (const name of Object.keys(pillarData)) html += `<th>${esc(name)}</th>`;
+        html += '</tr></thead><tbody><tr>';
+        for (const val of Object.values(pillarData)) html += `<td>${esc(val) || '-'}</td>`;
+        html += '</tr></tbody></table>';
+      }
+    }
+    return html || '<p class="note">Aucune donnée extraite.</p>';
+  }
+
+  /** PHASE 6 — TEMPORALITÉ DÉCENNALE (Blocs L + M + N + O) */
+  function renderPhase6(data) {
+    let html = `<div class="phase-header">PHASE 6 — TEMPORALITÉ DÉCENNALE <small>(Blocs L + M + N + O)</small></div>`;
+
+    // Piliers de Chance
+    html += `<h3>Vue d'ensemble des Piliers de Chance</h3>`;
+    html += renderLuckPillars(data.blocL);
+
+    // Étoiles PC
+    html += `<h3>Étoiles par Pilier de Chance</h3>`;
+    html += renderGenericTable(data.blocM);
+
+    // Relations PC
+    html += `<h3>Relations par Pilier de Chance</h3>`;
+    html += renderGenericTable(data.blocN);
+
+    // Hexagrammes PC
+    html += `<h3>Hexagrammes par Pilier de Chance</h3>`;
+    html += renderGenericTable(data.blocO);
+
+    return html;
+  }
+
+  function renderLuckPillars(pillars) {
+    if (!pillars || pillars.length === 0) return '<p class="note">Aucun pilier de chance extrait.</p>';
+
+    // Cards view
+    let html = '<div class="lp-timeline">';
     for (const p of pillars) {
-      html += `<tr>`;
-      html += `<td>${esc(p.age)}</td>`;
+      html += '<div class="lp-card">';
+      html += `<div class="lp-age">${esc(p.age)}</div>`;
+      if (p.periode) html += `<div class="lp-period">${esc(p.periode)}</div>`;
+      if (p.tronc) html += `<div class="lp-trunk">${esc(p.tronc)}</div>`;
+      if (p.branche) html += `<div class="pillar-detail">${esc(p.branche)}</div>`;
+      if (p.phaseDeVie) html += `<div class="pillar-detail"><span class="badge badge-phase">${esc(p.phaseDeVie)}</span></div>`;
+      if (p.troncsCaches && p.troncsCaches.length > 0) html += `<div class="pillar-detail">${esc(p.troncsCaches.join(', '))}</div>`;
+      if (p.nayin) html += `<div class="pillar-detail">${esc(p.nayin)}</div>`;
+      html += '</div>';
+    }
+    html += '</div>';
+
+    // Also table view
+    html += '<table><thead><tr><th>Âge</th><th>Période</th><th>Tronc</th><th>Branche</th><th>Phase</th><th>Troncs cachés</th><th>NaYin</th></tr></thead><tbody>';
+    for (const p of pillars) {
+      html += '<tr>';
+      html += `<td><strong>${esc(p.age)}</strong></td>`;
       html += `<td>${esc(p.periode)}</td>`;
       html += `<td>${esc(p.tronc)}</td>`;
       html += `<td>${esc(p.branche)}</td>`;
       html += `<td>${esc(p.phaseDeVie)}</td>`;
       html += `<td>${esc((p.troncsCaches || []).join(', '))}</td>`;
       html += `<td>${esc(p.nayin)}</td>`;
-      html += `</tr>`;
+      html += '</tr>';
     }
-    html += `</tbody></table>`;
+    html += '</tbody></table>';
     return html;
   }
 
-  function formatGenericTable(rows) {
-    if (!rows || rows.length === 0) {
-      return `<p class="note">Aucune donnée extraite.</p>`;
-    }
+  function renderGenericTable(rows) {
+    if (!rows || rows.length === 0) return '<p class="note">Aucune donnée extraite.</p>';
 
-    let html = `<table><tbody>`;
+    let html = '<table><tbody>';
     for (const row of rows) {
-      html += `<tr>`;
+      html += '<tr>';
       const cells = Array.isArray(row) ? row : [row];
       for (const cell of cells) {
         html += `<td>${esc(cell)}</td>`;
       }
-      html += `</tr>`;
+      html += '</tr>';
     }
-    html += `</tbody></table>`;
+    html += '</tbody></table>';
     return html;
   }
 
-  function formatBaZhai(data) {
-    if (!data) return `<p class="note">Aucune donnée Ba Zhai extraite.</p>`;
+  /** PHASE 7 — TEMPORALITÉ ANNUELLE (Bloc P) */
+  function renderPhase7(data) {
+    let html = `<div class="phase-header">PHASE 7 — TEMPORALITÉ ANNUELLE <small>(Bloc P)</small></div>`;
 
-    let html = `<table class="kv-table"><tbody>`;
+    html += `<h3>Piliers annuels (Liu Nian)</h3>`;
+    html += renderGenericTable(data.blocP);
+
+    return html;
+  }
+
+  /** PHASE 8 — SYSTÈMES COMPLÉMENTAIRES (Blocs Q + R) */
+  function renderPhase8(data) {
+    let html = `<div class="phase-header">PHASE 8 — SYSTÈMES COMPLÉMENTAIRES <small>(Blocs Q + R)</small></div>`;
+
+    // Ba Zhai
+    html += `<h3>Ba Zhai (8 Demeures)</h3>`;
+    html += renderBaZhai(data.blocQ);
+
+    // QMDJ
+    html += `<h3>Qi Men Dun Jia (Palais de Destinée)</h3>`;
+    html += kvTable(data.blocR);
+
+    return html;
+  }
+
+  function renderBaZhai(data) {
+    if (!data) return '<p class="note">Aucune donnée Ba Zhai extraite.</p>';
+
+    let html = '<table class="kv-table"><tbody>';
     html += `<tr><td>Chiffre Gua</td><td>${esc(data.chiffreGua)}</td></tr>`;
     html += `<tr><td>Étoile de la vie</td><td>${esc(data.etoileVie)}</td></tr>`;
     html += `<tr><td>Groupe</td><td>${esc(data.groupe)}</td></tr>`;
-    html += `</tbody></table>`;
+    html += '</tbody></table>';
 
+    html += '<div class="directions-grid">';
+
+    // Favorables
+    html += '<div class="dir-section">';
+    html += '<div class="dir-section-title fav">Directions favorables</div>';
     if (data.favorables && data.favorables.length > 0) {
-      html += `<h3>✅ Directions favorables</h3>`;
-      html += `<table><thead><tr><th>Nom</th><th>Direction</th></tr></thead><tbody>`;
       for (const f of data.favorables) {
-        html += `<tr><td><span class="badge badge-fav">${esc(f.nom)}</span></td><td>${esc(f.direction)}</td></tr>`;
+        html += `<div class="dir-item"><span class="badge badge-fav">${esc(f.nom)}</span><span>${esc(f.direction)}</span></div>`;
       }
-      html += `</tbody></table>`;
+    } else {
+      html += '<p class="note">Aucune</p>';
     }
+    html += '</div>';
 
+    // Défavorables
+    html += '<div class="dir-section">';
+    html += '<div class="dir-section-title def">Directions défavorables</div>';
     if (data.defavorables && data.defavorables.length > 0) {
-      html += `<h3>❌ Directions défavorables</h3>`;
-      html += `<table><thead><tr><th>Nom</th><th>Direction</th></tr></thead><tbody>`;
       for (const d of data.defavorables) {
-        html += `<tr><td><span class="badge badge-def">${esc(d.nom)}</span></td><td>${esc(d.direction)}</td></tr>`;
+        html += `<div class="dir-item"><span class="badge badge-def">${esc(d.nom)}</span><span>${esc(d.direction)}</span></div>`;
       }
-      html += `</tbody></table>`;
+    } else {
+      html += '<p class="note">Aucune</p>';
     }
+    html += '</div>';
 
+    html += '</div>';
     return html;
   }
 
   // =====================
-  // FORMAT ZHI RUN
+  // FORMAT BAZI — 8 PHASES
+  // =====================
+  function formatBaZi(data, personName) {
+    let html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analyse BaZi — ${esc(personName)}</title>
+  <style>${CSS}</style>
+</head>
+<body>
+<div class="main-title">Analyse BaZi — ${esc(personName)}</div>
+<div class="main-subtitle">Charte Id ${esc(data.blocA?.['Charte Id'] || '—')} — 8 phases</div>
+`;
+
+    html += renderPhase1(data);
+    html += '<hr class="phase-divider">';
+    html += renderPhase2(data);
+    html += '<hr class="phase-divider">';
+    html += renderPhase3(data);
+    html += '<hr class="phase-divider">';
+    html += renderPhase4(data);
+    html += '<hr class="phase-divider">';
+    html += renderPhase5(data);
+    html += '<hr class="phase-divider">';
+    html += renderPhase6(data);
+    html += '<hr class="phase-divider">';
+    html += renderPhase7(data);
+    html += '<hr class="phase-divider">';
+    html += renderPhase8(data);
+
+    html += `<p class="generated">Généré par BaZi Manager — ${new Date().toLocaleDateString('fr-FR')}</p>`;
+    html += '</body></html>';
+    return html;
+  }
+
+  // =====================
+  // FORMAT ZHI RUN (unchanged structure)
   // =====================
   function formatZhiRun(data, personName) {
     let html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Zhi Run Extraction — ${esc(personName)}</title>
   <style>${CSS}</style>
 </head>
 <body>
-<h1>🧭 Zhi Run Extraction — ${esc(personName)}</h1>
+<div class="main-title">Zhi Run — ${esc(personName)}</div>
 `;
 
-    // S1
-    html += `<div class="bloc-header">🔷 BLOC S1 — Infos de base</div>`;
+    html += `<div class="phase-header">BLOC S1 — Infos de base</div>`;
     html += kvTable(data.blocS1);
 
-    // S2
-    html += `<div class="bloc-header">🔷 BLOC S2 — Les 9 Palais</div>`;
-    html += formatPalaces(data.blocS2);
+    html += `<div class="phase-header">BLOC S2 — Les 9 Palais</div>`;
+    html += renderPalaces(data.blocS2);
 
-    // S3
-    html += `<div class="bloc-header">🔷 BLOC S3 — Formations de palais</div>`;
-    html += formatFormations(data.blocS3);
+    html += `<div class="phase-header">BLOC S3 — Formations de palais</div>`;
+    html += renderFormations(data.blocS3);
 
-    // S4
-    html += `<div class="bloc-header">🔷 BLOC S4 — Formations de troncs</div>`;
-    html += formatFormations(data.blocS4);
+    html += `<div class="phase-header">BLOC S4 — Formations de troncs</div>`;
+    html += renderFormations(data.blocS4);
 
-    // S5
-    html += `<div class="bloc-header">🔷 BLOC S5 — Formations spéciales</div>`;
-    html += formatFormations(data.blocS5);
+    html += `<div class="phase-header">BLOC S5 — Formations spéciales</div>`;
+    html += renderFormations(data.blocS5);
 
-    // S6
-    html += `<div class="bloc-header">🔷 BLOC S6 — Stratégies (36 Stratagèmes)</div>`;
-    html += formatStrategies(data.blocS6);
+    html += `<div class="phase-header">BLOC S6 — Stratégies (36 Stratagèmes)</div>`;
+    html += renderStrategies(data.blocS6);
 
-    // S7
-    html += `<div class="bloc-header">🔷 BLOC S7 — Informations complémentaires</div>`;
+    html += `<div class="phase-header">BLOC S7 — Informations complémentaires</div>`;
     html += kvTable(data.blocS7);
 
     html += `<p class="generated">Généré par BaZi Manager — ${new Date().toLocaleDateString('fr-FR')}</p>`;
-    html += `</body></html>`;
-
+    html += '</body></html>';
     return html;
   }
 
-  function formatPalaces(palaces) {
-    if (!palaces || Object.keys(palaces).length === 0) {
-      return `<p class="note">Aucun palais extrait.</p>`;
-    }
+  function renderPalaces(palaces) {
+    if (!palaces || Object.keys(palaces).length === 0) return '<p class="note">Aucun palais extrait.</p>';
 
-    // Display as 3x3 grid
     const grid = [['SE', 'S', 'SO'], ['E', 'Centre', 'O'], ['NE', 'N', 'NO']];
-    let html = `<table><tbody>`;
+    let html = '<table><tbody>';
     for (const row of grid) {
-      html += `<tr>`;
+      html += '<tr>';
       for (const dir of row) {
         const p = palaces[dir] || {};
-        html += `<td style="vertical-align:top;padding:10px;">`;
+        html += '<td style="vertical-align:top;padding:10px;">';
         html += `<strong>${esc(dir)}</strong><br>`;
         html += `Tronc: ${esc(p.tronc) || '-'}<br>`;
         html += `Étoile: ${esc(p.etoile) || '-'}<br>`;
         html += `Porte: ${esc(p.porte) || '-'}<br>`;
         html += `Gardien: ${esc(p.gardien) || '-'}<br>`;
         if (p.hexagramme) html += `Hex: ${esc(p.hexagramme)}<br>`;
-        html += `</td>`;
+        html += '</td>';
       }
-      html += `</tr>`;
+      html += '</tr>';
     }
-    html += `</tbody></table>`;
+    html += '</tbody></table>';
     return html;
   }
 
-  function formatFormations(formations) {
-    if (!formations || formations.length === 0) {
-      return `<p class="note">Aucune formation extraite.</p>`;
-    }
+  function renderFormations(formations) {
+    if (!formations || formations.length === 0) return '<p class="note">Aucune formation extraite.</p>';
 
-    let html = `<table><thead><tr>`;
+    let html = '<table><thead><tr>';
     const keys = Object.keys(formations[0]);
     for (const key of keys) html += `<th>${esc(key)}</th>`;
-    html += `</tr></thead><tbody>`;
+    html += '</tr></thead><tbody>';
     for (const f of formations) {
-      html += `<tr>`;
+      html += '<tr>';
       for (const key of keys) html += `<td>${esc(f[key])}</td>`;
-      html += `</tr>`;
+      html += '</tr>';
     }
-    html += `</tbody></table>`;
+    html += '</tbody></table>';
     return html;
   }
 
-  function formatStrategies(strategies) {
-    if (!strategies || strategies.length === 0) {
-      return `<p class="note">Aucune stratégie extraite.</p>`;
-    }
+  function renderStrategies(strategies) {
+    if (!strategies || strategies.length === 0) return '<p class="note">Aucune stratégie extraite.</p>';
 
-    let html = `<table><thead><tr><th>#</th><th>Catégorie</th><th>Nom</th><th>Description</th></tr></thead><tbody>`;
+    let html = '<table><thead><tr><th>#</th><th>Catégorie</th><th>Nom</th><th>Description</th></tr></thead><tbody>';
     for (const s of strategies) {
       html += `<tr><td>${esc(s.numero)}</td><td>${esc(s.categorie)}</td><td>${esc(s.nom)}</td><td>${esc(s.description)}</td></tr>`;
     }
-    html += `</tbody></table>`;
+    html += '</tbody></table>';
     return html;
   }
 
