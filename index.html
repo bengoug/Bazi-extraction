@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BaZi Manager</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <h1>BaZi Manager</h1>
+    <div class="header-actions">
+      <button class="btn btn-sm btn-icon" id="btn-config" title="Configuration">&#9881;</button>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-tab="upload">Upload + Extraction</button>
+    <button class="nav-tab" data-tab="files">Fichiers stock&#233;s</button>
+  </div>
+
+  <div class="container">
+
+    <!-- Config Section (togglable) -->
+    <div class="config-section" id="config-section">
+      <div class="card">
+        <div class="card-title">&#9881; Configuration GitHub</div>
+        <div class="config-row">
+          <div class="form-group">
+            <label for="github-token">Personal Access Token</label>
+            <div class="token-wrapper">
+              <input type="password" id="github-token" placeholder="ghp_xxxxxxxxxxxx">
+              <button class="token-toggle" id="token-toggle" title="Afficher/masquer">&#128065;</button>
+            </div>
+          </div>
+        </div>
+        <div class="config-row">
+          <div class="form-group">
+            <label for="github-owner">Propri&#233;taire (username)</label>
+            <input type="text" id="github-owner" placeholder="votre-username">
+          </div>
+          <div class="form-group">
+            <label for="github-repo">Nom du repo</label>
+            <input type="text" id="github-repo" placeholder="bazi-manager" value="bazi-manager">
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="btn-save-config">Sauvegarder la configuration</button>
+        <div class="status-msg" id="config-status"></div>
+      </div>
+    </div>
+
+    <!-- TAB: Upload + Extraction -->
+    <div id="tab-upload">
+      <div class="card">
+        <div class="card-title">Upload &amp; Extraction</div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="person-select">Personne</label>
+            <div class="form-group-inline">
+              <select id="person-select">
+                <option value="">-- Choisir --</option>
+              </select>
+              <button class="btn btn-sm btn-secondary" id="btn-add-person" title="Ajouter une personne">+</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="type-select">Type de fichier</label>
+            <select id="type-select">
+              <option value="bazi">&#127983; BaZi</option>
+              <option value="zhirun">&#129517; Zhi Run</option>
+              <option value="qmdj">&#128197; QMDJ du Jour</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Drop zone -->
+        <div class="drop-zone" id="drop-zone">
+          <div class="drop-icon">&#128194;</div>
+          <div class="drop-text">Glissez un fichier HTML ici ou cliquez pour s&#233;lectionner</div>
+          <div class="drop-hint">Fichiers HTML depuis chinesemetasoft.com</div>
+          <div class="file-name" id="file-name-display"></div>
+          <input type="file" id="file-input" accept=".html,.htm" style="display:none">
+        </div>
+
+        <!-- Actions -->
+        <div class="actions-bar">
+          <button class="btn btn-primary" id="btn-extract" disabled>Extraire</button>
+          <button class="btn btn-success" id="btn-download" disabled>T&#233;l&#233;charger l'extraction</button>
+          <button class="btn btn-secondary" id="btn-store" disabled>Stocker sur GitHub</button>
+        </div>
+
+        <div class="status-msg" id="upload-status"></div>
+      </div>
+
+      <!-- Preview -->
+      <div class="preview-area" id="preview-area">
+        <div class="card">
+          <div class="card-title">Aper&#231;u de l'extraction</div>
+          <iframe class="preview-frame" id="preview-frame" sandbox="allow-same-origin"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Files list -->
+    <div id="tab-files" class="file-list-section">
+      <div class="card">
+        <div class="card-title">Fichiers stock&#233;s sur GitHub</div>
+        <button class="btn btn-sm btn-secondary" id="btn-refresh-files">Rafra&#238;chir</button>
+        <div class="status-msg" id="files-status"></div>
+        <div id="files-container">
+          <div class="empty-state">
+            <div class="empty-icon">&#128193;</div>
+            <p>Configurez votre token GitHub et cliquez sur "Rafra&#238;chir" pour voir vos fichiers.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal: Add Person -->
+  <div class="modal-overlay" id="modal-person">
+    <div class="modal">
+      <h3>Ajouter une personne</h3>
+      <div class="form-group">
+        <label for="new-person-name">Pr&#233;nom</label>
+        <input type="text" id="new-person-name" placeholder="Ex: Serena">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-sm btn-secondary" id="btn-cancel-person">Annuler</button>
+        <button class="btn btn-sm btn-primary" id="btn-confirm-person">Ajouter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/parser-bazi.js"></script>
+  <script src="js/parser-zhirun.js"></script>
+  <script src="js/formatter.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
