@@ -1,103 +1,139 @@
 /**
  * parser-bazi.js — Extracteur HTML BaZi (chinesemetasoft.com/BaZi/ViewChart)
  * Parse le HTML sauvegardé et extrait les blocs A → R
+ *
+ * Structure du HTML source :
+ *   - div#bazipersonal    → table.frameDynamic (Détails personnels)
+ *   - div#bazigeographicaldata → table.frameDynamic (Données astro-géo)
+ *   - div#bazianalysisbasic (1er) → table.frameDynamic (Base d'analyse) + table.frameDynamic (Force/Éléments)
+ *   - div#bazianalysisbasic (2e) → table.frameDynamic (Analyse intermédiaire)
+ *   - table#bazi.bazi4pillars → Les 6 piliers (avec tables.baziinner imbriquées)
+ *   - table.frameDynamic contenant "10 Aspects" → Force des 10 aspects
+ *   - table contenant "Element" + "Strength" → 5 Éléments
+ *   - div#qimendunjiapalace (1er) → Ba Zhai
+ *   - div#qimendunjiapalace (2e) → QMDJ
+ *   - table.baziluckpillars → Piliers de Chance
  */
 
 const BaZiParser = (() => {
   'use strict';
 
-  // Utility: get text content trimmed
   function txt(el) {
     return el ? el.textContent.trim() : '';
   }
 
-  // Utility: find element containing text
-  function findByText(root, tag, text) {
-    const els = root.querySelectorAll(tag);
-    for (const el of els) {
-      if (el.textContent.includes(text)) return el;
+  function directText(el) {
+    // Get only direct text nodes, not from nested tables
+    if (!el) return '';
+    let text = '';
+    for (const node of el.childNodes) {
+      if (node.nodeType === 3) text += node.textContent;
     }
-    return null;
+    return text.trim();
   }
 
-  // Utility: find all elements containing text
-  function findAllByText(root, tag, text) {
-    const results = [];
-    const els = root.querySelectorAll(tag);
-    for (const el of els) {
-      if (el.textContent.includes(text)) results.push(el);
+  // Get rows from a table, excluding rows from nested sub-tables
+  function directRows(table) {
+    if (!table) return [];
+    const rows = [];
+    const tbody = table.querySelector(':scope > tbody') || table;
+    for (const child of tbody.children) {
+      if (child.tagName === 'TR') rows.push(child);
     }
-    return results;
+    return rows;
   }
 
-  // Utility: get value from a label/value pair in a table
-  function getValueAfterLabel(root, labelText) {
-    const cells = root.querySelectorAll('td, th');
-    for (let i = 0; i < cells.length; i++) {
-      if (cells[i].textContent.trim().includes(labelText)) {
-        // Value is usually in the next cell
-        if (i + 1 < cells.length) {
-          return txt(cells[i + 1]);
+  // Get direct cells from a row (not from nested tables)
+  function directCells(row) {
+    if (!row) return [];
+    const cells = [];
+    for (const child of row.children) {
+      if (child.tagName === 'TD' || child.tagName === 'TH') cells.push(child);
+    }
+    return cells;
+  }
+
+  // Find a frameDynamic table inside a div by ID
+  function getFrameTable(doc, divId, index) {
+    const divs = doc.querySelectorAll(`#${divId}`);
+    const div = divs[index || 0];
+    if (!div) return null;
+    const tables = div.querySelectorAll(':scope > table.frameDynamic, table.frameDynamic');
+    return tables[0] || null;
+  }
+
+  // Parse a simple 2-column label/value table (class="frameDynamic")
+  function parseKvTable(table) {
+    if (!table) return {};
+    const data = {};
+    const rows = directRows(table);
+    for (const row of rows) {
+      const cells = directCells(row);
+      if (cells.length >= 2) {
+        const label = directText(cells[0]) || txt(cells[0]);
+        const value = directText(cells[1]) || txt(cells[1]);
+        if (label && !label.includes('Détails') && !label.includes('Donnée') &&
+            !label.includes('Base d\'analyse') && !label.includes('Analyse Ba Zi') &&
+            !label.includes('Ba Zhai') && !label.includes('Qi Men')) {
+          data[label] = value;
         }
       }
     }
-    return '';
+    return data;
   }
 
-  // Utility: extract trunk name from image src or alt
-  function trunkFromImg(img) {
-    if (!img) return '';
-    const alt = img.getAttribute('alt') || '';
-    if (alt) return alt.replace(/\.png$/i, '');
-    const src = img.getAttribute('src') || '';
-    const match = src.match(/\/([A-Za-z]+)\.png/i);
-    return match ? match[1] : '';
-  }
-
-  // Element mapping
   const ELEMENT_EMOJI = {
-    'Feu': '🔴', 'Fire': '🔴', 'feu': '🔴',
-    'Bois': '🟢', 'Wood': '🟢', 'bois': '🟢',
-    'Eau': '🔵', 'Water': '🔵', 'eau': '🔵',
-    'Métal': '🟡', 'Metal': '🟡', 'métal': '🟡', 'metal': '🟡',
-    'Terre': '🟤', 'Earth': '🟤', 'terre': '🟤'
+    'Feu': '🔴', 'Bois': '🟢', 'Eau': '🔵', 'Métal': '🟡', 'Terre': '🟤'
   };
 
-  function elementEmoji(elementName) {
+  function elementEmoji(name) {
+    if (!name) return '';
     for (const [key, emoji] of Object.entries(ELEMENT_EMOJI)) {
-      if (elementName && elementName.toLowerCase().includes(key.toLowerCase())) {
-        return emoji;
-      }
+      if (name.includes(key)) return emoji;
     }
     return '';
+  }
+
+  // Extract trunk name from img src
+  function trunkFromImg(img) {
+    if (!img) return '';
+    const src = img.getAttribute('src') || '';
+    const match = src.match(/\/([A-Za-z]+)(?:\(\d+\))?\.png/i);
+    return match ? match[1] : '';
   }
 
   // =====================
   // BLOC A — Détails personnels
   // =====================
   function parseBlocA(doc) {
-    const data = {};
-    const labels = ['Nom complet', 'Genre', 'Date de naissance', 'Age', 'Charte Id'];
-    for (const label of labels) {
-      data[label] = getValueAfterLabel(doc, label);
+    // Find the table inside div#bazipersonal
+    const div = doc.querySelector('#bazipersonal');
+    if (!div) return {};
+    // The frameDynamic table is nested inside
+    const tables = div.querySelectorAll('table.frameDynamic');
+    for (const table of tables) {
+      const text = txt(table);
+      if (text.includes('Nom complet') || text.includes('Genre')) {
+        return parseKvTable(table);
+      }
     }
-    return data;
+    return {};
   }
 
   // =====================
   // BLOC B — Données astro-géographiques
   // =====================
   function parseBlocB(doc) {
-    const data = {};
-    const labels = [
-      'Type de calendrier', 'Lieu', 'Zone de temps', 'Longitude',
-      'Heure locale', 'Equation de l\'heure', 'Geo Compensation', 'DST',
-      'Heure solaire', 'Jie Qi', 'Date de départ', 'Date de fin'
-    ];
-    for (const label of labels) {
-      data[label] = getValueAfterLabel(doc, label);
+    const div = doc.querySelector('#bazigeographicaldata');
+    if (!div) return {};
+    const tables = div.querySelectorAll('table.frameDynamic');
+    for (const table of tables) {
+      const text = txt(table);
+      if (text.includes('Type de calendrier') || text.includes('Heure solaire')) {
+        return parseKvTable(table);
+      }
     }
-    return data;
+    return {};
   }
 
   // =====================
@@ -106,34 +142,6 @@ const BaZiParser = (() => {
   function parseBlocC(doc) {
     const pillarNames = ['Heure', 'Jour', 'Mois', 'Année', 'Conception', 'Palais de vie'];
     const pillars = {};
-
-    // Find the main chart table — usually contains trunk/branch info
-    // Look for a table that has pillar headers
-    const tables = doc.querySelectorAll('table');
-    let chartTable = null;
-
-    for (const table of tables) {
-      const headerText = txt(table);
-      if (headerText.includes('Heure') && headerText.includes('Jour') &&
-          headerText.includes('Mois') && headerText.includes('Année')) {
-        // Check if this looks like the main pillars table (has trunk images)
-        if (table.querySelector('img') || headerText.includes('Tronc') || headerText.includes('Branche')) {
-          chartTable = table;
-          break;
-        }
-      }
-    }
-
-    if (!chartTable) {
-      // Try a broader search
-      for (const table of tables) {
-        const th = table.querySelector('th, td');
-        if (th && (txt(th).includes('Heure') || txt(table.rows[0]).includes('Heure'))) {
-          chartTable = table;
-          break;
-        }
-      }
-    }
 
     for (const name of pillarNames) {
       pillars[name] = {
@@ -144,102 +152,140 @@ const BaZiParser = (() => {
       };
     }
 
-    if (chartTable) {
-      const rows = chartTable.querySelectorAll('tr');
+    // Find table#bazi.bazi4pillars - this is the main pillars table
+    const mainTable = doc.querySelector('table#bazi.bazi4pillars') ||
+                      doc.querySelector('table.bazi4pillars');
+    if (!mainTable) return pillars;
 
-      // Try to identify columns based on header row
-      let colMap = {};
-      if (rows.length > 0) {
-        const headerCells = rows[0].querySelectorAll('th, td');
-        headerCells.forEach((cell, idx) => {
-          const t = txt(cell);
-          for (const name of pillarNames) {
-            if (t.includes(name)) {
-              colMap[name] = idx;
-            }
-          }
-        });
-      }
+    // The main table has rows:
+    // Row 0 (HEADER): Date | Heure | Jour | Mois | Année | Pilliers de conception | Palais de vie
+    // Row 1: Lundi | 10:48 | 05 | 03 | 1979
+    // Row 2: Tronc | [baziinner tables for each pillar]
+    // Then individual rows for each trunk detail (aspect, pinyin, element)
+    // Then Branche row with baziinner tables
+    // Then Troncs cachés, NaYin, Étoiles auxiliaires, Relations, Hexagramme rows
 
-      // Parse rows for trunk, branch, hidden trunks, nayin
-      for (const row of rows) {
-        const cells = row.querySelectorAll('td, th');
-        const rowLabel = cells.length > 0 ? txt(cells[0]).toLowerCase() : '';
+    const rows = directRows(mainTable);
+    if (rows.length < 3) return pillars;
 
+    // Identify column mapping from header row
+    const headerCells = directCells(rows[0]);
+    const colMap = {};
+    headerCells.forEach((cell, idx) => {
+      const t = txt(cell);
+      if (t.includes('Heure') && !t.includes('Date')) colMap['Heure'] = idx;
+      else if (t === 'Jour' || t.startsWith('Jour')) colMap['Jour'] = idx;
+      else if (t.includes('Mois')) colMap['Mois'] = idx;
+      else if (t.includes('Année')) colMap['Année'] = idx;
+      else if (t.includes('conception')) colMap['Conception'] = idx;
+      else if (t.includes('Palais')) colMap['Palais de vie'] = idx;
+    });
+
+    // Parse each data row
+    for (let r = 1; r < rows.length; r++) {
+      const cells = directCells(rows[r]);
+      if (cells.length === 0) continue;
+
+      const rowLabel = directText(cells[0]).toLowerCase();
+
+      if (rowLabel.includes('tronc') && !rowLabel.includes('cach')) {
+        // Trunk row - each cell contains a baziinner table with: [IMG aspect] / Pinyin / Element Polarity
         for (const [name, colIdx] of Object.entries(colMap)) {
           if (colIdx >= cells.length) continue;
           const cell = cells[colIdx];
+          const innerTable = cell.querySelector('table.baziinner');
+          if (innerTable) {
+            const innerRows = innerTable.querySelectorAll('tr');
+            if (innerRows.length >= 3) {
+              // Row 0: [IMG] aspect code (e.g. "DV")
+              const aspectText = txt(innerRows[0]);
+              const aspectMatch = aspectText.match(/\b(DV|DO|7K|VR|RI|RD|ReI|ReD|HO|A)\b/);
+              if (aspectMatch) pillars[name].tronc.aspect = aspectMatch[1];
 
-          // Trunk row - look for images
-          const img = cell.querySelector('img');
-          if (img && !pillars[name].tronc.pinyin) {
-            pillars[name].tronc.pinyin = trunkFromImg(img);
-          }
+              // Row 0 also has the trunk image
+              const img = innerRows[0].querySelector('img');
+              if (img) pillars[name].tronc.pinyin = trunkFromImg(img);
 
-          // Extract element info from cell text
-          const cellText = txt(cell);
-
-          if (rowLabel.includes('tronc') && !rowLabel.includes('cach')) {
-            pillars[name].tronc.pinyin = pillars[name].tronc.pinyin || cellText;
-            // Look for element in same or adjacent cell
-            for (const [elem, emoji] of Object.entries(ELEMENT_EMOJI)) {
-              if (cellText.includes(elem)) {
-                pillars[name].tronc.element = elem;
-                break;
+              // Row 1: Pinyin name
+              const pinyin = txt(innerRows[1]);
+              if (pinyin && !pillars[name].tronc.pinyin) {
+                pillars[name].tronc.pinyin = pinyin;
               }
-            }
-          }
 
-          if (rowLabel.includes('branche')) {
-            pillars[name].branche.pinyin = cellText.split(/\s/)[0] || cellText;
-          }
-
-          if (rowLabel.includes('cach')) {
-            const parts = cellText.split(/[,;\/\n]/).map(s => s.trim()).filter(Boolean);
-            pillars[name].troncsCaches = parts;
-          }
-
-          if (rowLabel.includes('nayin') || rowLabel.includes('na yin')) {
-            pillars[name].nayin = cellText;
-          }
-
-          // MV detection
-          if (cellText.includes('MV')) {
-            pillars[name].branche.mv = true;
-          }
-
-          // Phase de vie
-          const phases = ['Florissant', 'Prospère', 'Affaibli', 'Bain', 'Croissance',
-            'Naissance', 'Embryon', 'Mort', 'Maladie', 'Déclin', 'Tombeau', 'Fin'];
-          for (const phase of phases) {
-            if (cellText.includes(phase)) {
-              pillars[name].branche.phaseDeVie = phase;
+              // Row 2: Element + Polarity (e.g. "Eau Yin")
+              const elemPol = txt(innerRows[2]);
+              pillars[name].tronc.element = elemPol;
             }
           }
         }
-      }
-
-      // Try to extract aspects from adjacent cells
-      for (const row of rows) {
-        const cells = row.querySelectorAll('td, th');
-        const aspects = ['7K', 'VR', 'RI', 'DO', 'RW', 'EG', 'HO', 'DR', 'IR', 'DW',
-          'RP', 'PO', 'PM', 'GR', 'GP'];
-        for (const cell of cells) {
-          const t = txt(cell);
-          for (const aspect of aspects) {
-            if (t === aspect || t.includes('(' + aspect + ')')) {
-              // Find which pillar this belongs to
-              const cellIdx = Array.from(cells).indexOf(cell);
-              for (const [name, colIdx] of Object.entries(colMap)) {
-                if (Math.abs(cellIdx - colIdx) <= 1) {
-                  pillars[name].tronc.aspect = aspect;
-                }
+      } else if (rowLabel.includes('branche')) {
+        // Branch row
+        for (const [name, colIdx] of Object.entries(colMap)) {
+          if (colIdx >= cells.length) continue;
+          const cell = cells[colIdx];
+          const innerTable = cell.querySelector('table.baziinner');
+          if (innerTable) {
+            const innerRows = innerTable.querySelectorAll('tr');
+            if (innerRows.length >= 5) {
+              // Row 0: [IMG]
+              // Row 1: Phase de vie (Mort, Affaibli, etc.)
+              pillars[name].branche.phaseDeVie = txt(innerRows[1]);
+              // Row 2: Pinyin
+              pillars[name].branche.pinyin = txt(innerRows[2]);
+              // Row 3: Animal
+              pillars[name].branche.animal = txt(innerRows[3]);
+              // Row 4: Element + Polarity
+              pillars[name].branche.element = txt(innerRows[4]);
+            } else if (innerRows.length >= 1) {
+              // Simpler structure
+              const img = innerTable.querySelector('img');
+              if (img) {
+                pillars[name].branche.pinyin = trunkFromImg(img);
               }
             }
           }
         }
+      } else if (rowLabel.includes('troncs cach') || rowLabel.includes('cach')) {
+        // Hidden trunks row
+        for (const [name, colIdx] of Object.entries(colMap)) {
+          if (colIdx >= cells.length) continue;
+          const cell = cells[colIdx];
+          const innerTable = cell.querySelector('table.baziinner');
+          if (innerTable) {
+            const innerRows = innerTable.querySelectorAll('tr');
+            if (innerRows.length >= 2) {
+              // Row 1 has the pinyin names
+              const pinyinRow = txt(innerRows[1]);
+              pillars[name].troncsCaches = pinyinRow.split(/(?=[A-Z])/).filter(s => s.trim());
+            }
+          }
+        }
+      } else if (rowLabel.includes('nayin') || rowLabel.includes('na yin')) {
+        // NaYin row - baziinner tables with single row
+        for (const [name, colIdx] of Object.entries(colMap)) {
+          if (colIdx >= cells.length) continue;
+          const cell = cells[colIdx];
+          const innerTable = cell.querySelector('table.baziinner');
+          if (innerTable) {
+            pillars[name].nayin = txt(innerTable);
+          } else {
+            const val = directText(cell);
+            if (val) pillars[name].nayin = val;
+          }
+        }
+      } else if (rowLabel.includes('toiles auxiliaires') || rowLabel.includes('etoiles')) {
+        // Stars - handled in bloc D
+      } else if (rowLabel.includes('relation')) {
+        // Relations - handled in bloc E
       }
     }
+
+    // Detect MV from tooltips or text
+    const mvDivs = doc.querySelectorAll('div[id*="god-tooltip"]');
+    // Also check the base analysis table for MV info
+    const allText = doc.body ? doc.body.textContent : '';
+    // MV detection from Bloc H data
+    const mvMatch = allText.match(/Mort et vide\*?([^\n]*)/);
 
     return pillars;
   }
@@ -250,41 +296,39 @@ const BaZiParser = (() => {
   function parseBlocD(doc) {
     const stars = {};
     const pillarNames = ['Heure', 'Jour', 'Mois', 'Année', 'Conception', 'Palais de vie'];
-    for (const name of pillarNames) {
-      stars[name] = [];
-    }
+    for (const name of pillarNames) stars[name] = [];
 
-    // Look for section with "Etoiles auxiliaires" or "AP001" etc.
-    const tables = doc.querySelectorAll('table');
-    for (const table of tables) {
-      const text = txt(table);
-      if (text.includes('Etoiles auxiliaires') || text.includes('toiles auxiliaires') ||
-          text.includes('AP0') || text.includes('Auxiliary')) {
-        const rows = table.querySelectorAll('tr');
+    const mainTable = doc.querySelector('table#bazi.bazi4pillars') ||
+                      doc.querySelector('table.bazi4pillars');
+    if (!mainTable) return stars;
 
-        // First identify column headers
-        let colMap = {};
-        if (rows.length > 0) {
-          const headerCells = rows[0].querySelectorAll('th, td');
-          headerCells.forEach((cell, idx) => {
-            const t = txt(cell);
-            for (const name of pillarNames) {
-              if (t.includes(name)) {
-                colMap[name] = idx;
-              }
-            }
-          });
-        }
+    const rows = directRows(mainTable);
+    const headerCells = directCells(rows[0]);
+    const colMap = {};
+    headerCells.forEach((cell, idx) => {
+      const t = txt(cell);
+      if (t.includes('Heure') && !t.includes('Date')) colMap['Heure'] = idx;
+      else if (t === 'Jour' || t.startsWith('Jour')) colMap['Jour'] = idx;
+      else if (t.includes('Mois')) colMap['Mois'] = idx;
+      else if (t.includes('Année')) colMap['Année'] = idx;
+      else if (t.includes('conception')) colMap['Conception'] = idx;
+      else if (t.includes('Palais')) colMap['Palais de vie'] = idx;
+    });
 
-        for (let r = 1; r < rows.length; r++) {
-          const cells = rows[r].querySelectorAll('td, th');
-          for (const [name, colIdx] of Object.entries(colMap)) {
-            if (colIdx < cells.length) {
-              const val = txt(cells[colIdx]);
-              if (val) {
-                stars[name].push(val);
-              }
-            }
+    for (let r = 1; r < rows.length; r++) {
+      const cells = directCells(rows[r]);
+      if (cells.length === 0) continue;
+      const rowLabel = directText(cells[0]).toLowerCase();
+
+      if (rowLabel.includes('toiles') || rowLabel.includes('etoiles')) {
+        for (const [name, colIdx] of Object.entries(colMap)) {
+          if (colIdx >= cells.length) continue;
+          const cell = cells[colIdx];
+          // Stars are in baziinner tables, each with a single text row
+          const innerTables = cell.querySelectorAll('table.baziinner');
+          for (const inner of innerTables) {
+            const starName = txt(inner);
+            if (starName) stars[name].push(starName);
           }
         }
         break;
@@ -299,31 +343,53 @@ const BaZiParser = (() => {
   // =====================
   function parseBlocE(doc) {
     const relations = {};
-    const relTypes = [
-      '3 Harmonies', 'Combo de 6', 'Punition', 'Clash',
-      'Destruction', 'Préjudice', 'Combo des Troncs', 'Clash des Troncs'
-    ];
 
-    for (const relType of relTypes) {
-      relations[relType] = [];
+    const mainTable = doc.querySelector('table#bazi.bazi4pillars') ||
+                      doc.querySelector('table.bazi4pillars');
+    if (!mainTable) return relations;
 
-      const cells = doc.querySelectorAll('td, th');
-      for (let i = 0; i < cells.length; i++) {
-        const t = txt(cells[i]);
-        if (t.includes(relType)) {
-          // Value is usually in the next cell or same row
-          if (i + 1 < cells.length) {
-            const val = txt(cells[i + 1]);
-            if (val) {
-              relations[relType].push(val);
+    const rows = directRows(mainTable);
+    const headerCells = directCells(rows[0]);
+    const colMap = {};
+    headerCells.forEach((cell, idx) => {
+      const t = txt(cell);
+      if (t.includes('Heure') && !t.includes('Date')) colMap['Heure'] = idx;
+      else if (t === 'Jour' || t.startsWith('Jour')) colMap['Jour'] = idx;
+      else if (t.includes('Mois')) colMap['Mois'] = idx;
+      else if (t.includes('Année')) colMap['Année'] = idx;
+      else if (t.includes('conception')) colMap['Conception'] = idx;
+      else if (t.includes('Palais')) colMap['Palais de vie'] = idx;
+    });
+
+    for (let r = 1; r < rows.length; r++) {
+      const cells = directCells(rows[r]);
+      if (cells.length === 0) continue;
+      const rowLabel = directText(cells[0]).toLowerCase();
+
+      if (rowLabel.includes('relation')) {
+        for (const [name, colIdx] of Object.entries(colMap)) {
+          if (colIdx >= cells.length) continue;
+          const cell = cells[colIdx];
+          const innerTables = cell.querySelectorAll('table.baziinner');
+          for (const inner of innerTables) {
+            const relText = txt(inner);
+            if (relText) {
+              // Extract relation type and tag, e.g. "Préjudice [M]"
+              const match = relText.match(/^(.+?)\s*\[([HJMA])\]$/);
+              if (match) {
+                const type = match[1].trim();
+                const tag = match[2];
+                if (!relations[type]) relations[type] = [];
+                relations[type].push(`${name} [${tag}]`);
+              } else if (relText.trim()) {
+                const type = relText.trim();
+                if (!relations[type]) relations[type] = [];
+                relations[type].push(name);
+              }
             }
           }
-          // Also check within the same cell for tags [H], [J], [M], [A]
-          const tags = t.match(/\[[HJMA]\]/g);
-          if (tags) {
-            relations[relType].push({ text: t, tags: tags });
-          }
         }
+        break;
       }
     }
 
@@ -337,46 +403,69 @@ const BaZiParser = (() => {
     const hexagrams = {};
     const pillarNames = ['Heure', 'Jour', 'Mois', 'Année', 'Conception', 'Palais de vie'];
 
-    const tables = doc.querySelectorAll('table');
-    for (const table of tables) {
-      const text = txt(table);
-      if (text.includes('Hexagramme') || text.includes('hexagramme') ||
-          text.includes('Trigramme') || text.includes('trigramme')) {
-        const rows = table.querySelectorAll('tr');
+    const mainTable = doc.querySelector('table#bazi.bazi4pillars') ||
+                      doc.querySelector('table.bazi4pillars');
+    if (!mainTable) return hexagrams;
 
-        let colMap = {};
-        if (rows.length > 0) {
-          const headerCells = rows[0].querySelectorAll('th, td');
-          headerCells.forEach((cell, idx) => {
-            const t = txt(cell);
-            for (const name of pillarNames) {
-              if (t.includes(name)) colMap[name] = idx;
-            }
-          });
-        }
+    const rows = directRows(mainTable);
+    const headerCells = directCells(rows[0]);
+    const colMap = {};
+    headerCells.forEach((cell, idx) => {
+      const t = txt(cell);
+      if (t.includes('Heure') && !t.includes('Date')) colMap['Heure'] = idx;
+      else if (t === 'Jour' || t.startsWith('Jour')) colMap['Jour'] = idx;
+      else if (t.includes('Mois')) colMap['Mois'] = idx;
+      else if (t.includes('Année')) colMap['Année'] = idx;
+      else if (t.includes('conception')) colMap['Conception'] = idx;
+      else if (t.includes('Palais')) colMap['Palais de vie'] = idx;
+    });
 
-        for (const name of pillarNames) {
-          hexagrams[name] = { trigrammeHaut: '', trigrammeBas: '', numero: '', nom: '' };
-        }
+    for (let r = 1; r < rows.length; r++) {
+      const cells = directCells(rows[r]);
+      if (cells.length === 0) continue;
+      const rowLabel = directText(cells[0]).toLowerCase();
 
-        for (const row of rows) {
-          const cells = row.querySelectorAll('td, th');
-          const label = cells.length > 0 ? txt(cells[0]).toLowerCase() : '';
+      if (rowLabel.includes('hexagramme')) {
+        for (const [name, colIdx] of Object.entries(colMap)) {
+          if (colIdx >= cells.length) continue;
+          const cell = cells[colIdx];
+          // Hexagram data: baziinner table (trigrammes) + adjacent table (number - name)
+          const innerTable = cell.querySelector('table.baziinner');
+          const hex = { trigrammeHaut: '', trigrammeBas: '', numero: '', nom: '' };
 
-          for (const [name, colIdx] of Object.entries(colMap)) {
-            if (colIdx >= cells.length) continue;
-            const val = txt(cells[colIdx]);
-
-            if (label.includes('haut') || label.includes('upper')) {
-              hexagrams[name].trigrammeHaut = val;
-            } else if (label.includes('bas') || label.includes('lower')) {
-              hexagrams[name].trigrammeBas = val;
-            } else if (label.includes('num') || label.includes('#')) {
-              hexagrams[name].numero = val;
-            } else if (label.includes('nom') || label.includes('name')) {
-              hexagrams[name].nom = val;
+          if (innerTable) {
+            const innerRows = innerTable.querySelectorAll('tr');
+            if (innerRows.length >= 3) {
+              // Row 0: Element
+              hex.trigrammeHaut = txt(innerRows[0]);
+              // Row 1: [IMG] number (haut)
+              const img1 = innerRows[1].querySelector('img');
+              if (img1) {
+                const name1 = trunkFromImg(img1);
+                hex.trigrammeHaut = name1;
+              }
+              // Row 2: [IMG] number (bas)
+              const img2 = innerRows[2].querySelector('img');
+              if (img2) {
+                hex.trigrammeBas = trunkFromImg(img2);
+              }
             }
           }
+
+          // Find the hex name/number table (non-baziinner, adjacent)
+          const allTables = cell.querySelectorAll('table');
+          for (const t of allTables) {
+            if (!t.classList.contains('baziinner')) {
+              const content = txt(t);
+              const match = content.match(/(\d+)\s*-\s*(.+)/);
+              if (match) {
+                hex.numero = match[1];
+                hex.nom = match[2].trim();
+              }
+            }
+          }
+
+          hexagrams[name] = hex;
         }
         break;
       }
@@ -393,46 +482,45 @@ const BaZiParser = (() => {
     const labels = ['Groupe', 'En dehors du Gua', 'Famille', 'Stratagème'];
     const pillarNames = ['Heure', 'Jour', 'Mois', 'Année', 'Conception', 'Palais de vie'];
 
+    const mainTable = doc.querySelector('table#bazi.bazi4pillars') ||
+                      doc.querySelector('table.bazi4pillars');
+    if (!mainTable) return data;
+
+    const rows = directRows(mainTable);
+    const headerCells = directCells(rows[0]);
+    const colMap = {};
+    headerCells.forEach((cell, idx) => {
+      const t = txt(cell);
+      if (t.includes('Heure') && !t.includes('Date')) colMap['Heure'] = idx;
+      else if (t === 'Jour' || t.startsWith('Jour')) colMap['Jour'] = idx;
+      else if (t.includes('Mois')) colMap['Mois'] = idx;
+      else if (t.includes('Année')) colMap['Année'] = idx;
+      else if (t.includes('conception')) colMap['Conception'] = idx;
+      else if (t.includes('Palais')) colMap['Palais de vie'] = idx;
+    });
+
     for (const label of labels) {
       data[label] = {};
-      for (const name of pillarNames) {
-        data[label][name] = '';
-      }
     }
 
-    const tables = doc.querySelectorAll('table');
-    for (const table of tables) {
-      const text = txt(table);
-      if (text.includes('Groupe') || text.includes('Gua') || text.includes('Stratagème')) {
-        const rows = table.querySelectorAll('tr');
+    for (let r = 1; r < rows.length; r++) {
+      const cells = directCells(rows[r]);
+      if (cells.length === 0) continue;
+      const rowLabel = directText(cells[0]);
 
-        let colMap = {};
-        if (rows.length > 0) {
-          const headerCells = rows[0].querySelectorAll('th, td');
-          headerCells.forEach((cell, idx) => {
-            const t = txt(cell);
-            for (const name of pillarNames) {
-              if (t.includes(name)) colMap[name] = idx;
-            }
-          });
-        }
-
-        for (const row of rows) {
-          const cells = row.querySelectorAll('td, th');
-          if (cells.length === 0) continue;
-          const rowLabel = txt(cells[0]);
-
-          for (const label of labels) {
-            if (rowLabel.includes(label)) {
-              for (const [name, colIdx] of Object.entries(colMap)) {
-                if (colIdx < cells.length) {
-                  data[label][name] = txt(cells[colIdx]);
-                }
-              }
+      for (const label of labels) {
+        if (rowLabel.includes(label)) {
+          for (const [name, colIdx] of Object.entries(colMap)) {
+            if (colIdx >= cells.length) continue;
+            const cell = cells[colIdx];
+            const innerTable = cell.querySelector('table.baziinner');
+            if (innerTable) {
+              data[label][name] = txt(innerTable);
+            } else {
+              data[label][name] = directText(cell);
             }
           }
         }
-        break;
       }
     }
 
@@ -444,29 +532,75 @@ const BaZiParser = (() => {
   // =====================
   function parseBlocH(doc) {
     const data = {};
-    const labels = [
-      'Maître du Jour', 'Noble', 'Intelligence', 'Cheval de Ciel',
-      'Fleur de Pêcher', 'Solitaire', 'Docteur Céleste', 'Etoile de la maladie',
-      'Mort et vide', 'Dieu Utile', 'He Luo Li Shu', 'Saison', 'Par saison',
-      'Score fortifiant', 'Score affaiblissant'
-    ];
 
-    for (const label of labels) {
-      data[label] = getValueAfterLabel(doc, label);
+    // Find tables inside div#bazianalysisbasic (first one)
+    const divs = doc.querySelectorAll('#bazianalysisbasic');
+    if (divs.length === 0) return data;
+
+    const firstDiv = divs[0];
+    const tables = firstDiv.querySelectorAll('table.frameDynamic');
+
+    // First frameDynamic table: Base d'analyse
+    if (tables[0]) {
+      const kvData = parseKvTable(tables[0]);
+      Object.assign(data, kvData);
     }
 
-    // Fort/Faible
-    data['Force'] = '';
-    const allText = doc.body ? doc.body.textContent : '';
-    if (allText.includes('Fort')) data['Force'] = 'Fort';
-    if (allText.includes('Faible')) data['Force'] = data['Force'] ? data['Force'] + ' / Faible' : 'Faible';
+    // Second frameDynamic table (or frameNone): Force du MJ
+    if (tables[1]) {
+      const rows = directRows(tables[1]);
+      for (const row of rows) {
+        const cells = directCells(row);
+        if (cells.length >= 2) {
+          const label = directText(cells[0]);
+          const value = directText(cells[1]);
+          if (label && value && !label.includes('Cinq') && !label.includes('Saison') &&
+              !label.match(/^\d+\s*%/)) {
+            // Only clean kv pairs
+            if (label.includes('Par saison') || label.includes('Score') ||
+                label === 'Faible' || label === 'Fort') {
+              data[label] = value;
+            }
+          }
+        }
+        // Single cell with "Faible" or "Fort"
+        if (cells.length === 1) {
+          const t = directText(cells[0]);
+          if (t === 'Faible' || t === 'Fort') {
+            data['Force'] = t;
+          }
+        }
+      }
 
-    // Try to be more precise - look near score labels
-    const cells = doc.querySelectorAll('td, th');
-    for (const cell of cells) {
-      const t = txt(cell);
-      if (t === 'Fort' || t === 'Faible') {
-        data['Force'] = t;
+      // Extract Saison
+      for (const row of rows) {
+        const cells = directCells(row);
+        if (cells.length >= 2) {
+          const label = directText(cells[0]);
+          if (label === 'Saison') {
+            data['Saison'] = directText(cells[1]);
+          }
+        }
+      }
+    }
+
+    // Also parse the frameNone table for Force
+    const frameNone = firstDiv.querySelector('table.frameNone');
+    if (frameNone) {
+      const rows = frameNone.querySelectorAll('tr');
+      for (const row of rows) {
+        const cells = directCells(row);
+        if (cells.length >= 2) {
+          const label = directText(cells[0]);
+          const value = directText(cells[1]);
+          if (label.includes('Par saison')) data['Par saison'] = value;
+          if (label.includes('Score fortifiant')) data['Score fortifiant'] = value;
+          if (label.includes('Score affaiblissant')) data['Score affaiblissant'] = value;
+        }
+        if (cells.length === 1) {
+          const t = directText(cells[0]);
+          if (t === 'Faible' || t === 'Fort') data['Force'] = t;
+        }
       }
     }
 
@@ -478,32 +612,31 @@ const BaZiParser = (() => {
   // =====================
   function parseBlocI(doc) {
     const aspects = [];
-    const aspectCodes = ['7K', 'VR', 'RI', 'DO', 'RW', 'EG', 'HO', 'DR', 'IR', 'DW',
-      'RP', 'PO', 'PM', 'GR', 'GP'];
 
-    const tables = doc.querySelectorAll('table');
+    // Find table.frameDynamic that contains "10 Aspects"
+    const tables = doc.querySelectorAll('table.frameDynamic');
     for (const table of tables) {
-      const text = txt(table);
-      // Find a table that has aspect codes and scores
-      let hasAspects = false;
-      for (const code of aspectCodes) {
-        if (text.includes(code)) { hasAspects = true; break; }
-      }
-
-      if (hasAspects && (text.includes('Score') || text.includes('score'))) {
-        const rows = table.querySelectorAll('tr');
+      const firstRowText = directRows(table)[0] ? txt(directRows(table)[0]) : '';
+      if (firstRowText.includes('10 Aspects')) {
+        const rows = directRows(table);
         for (let r = 1; r < rows.length; r++) {
-          const cells = rows[r].querySelectorAll('td, th');
-          if (cells.length >= 3) {
-            const aspect = {
-              code: txt(cells[0]),
-              nomFr: txt(cells[1]) || '',
-              nomCn: txt(cells[2]) || '',
-              tronc: cells.length > 3 ? txt(cells[3]) : '',
-              score: cells.length > 4 ? parseFloat(txt(cells[cells.length - 1])) || 0 : 0
-            };
-            if (aspect.code) {
-              aspects.push(aspect);
+          const cells = directCells(rows[r]);
+          if (cells.length >= 4) {
+            const code = directText(cells[0]);
+            const nomFr = directText(cells[1]);
+            const nomCn = directText(cells[2]);
+            const tronc = directText(cells[3]);
+            let score = 0;
+
+            // Score is in the last column (Moyenne / Force)
+            if (cells.length >= 5) {
+              score = parseFloat(directText(cells[4])) || 0;
+            }
+
+            // Only real aspect rows
+            const validCodes = ['DO', 'ReI', 'RD', 'DV', '7K', 'ReD', 'RI', 'VR', 'A', 'HO'];
+            if (validCodes.includes(code)) {
+              aspects.push({ code, nomFr, nomCn, tronc, score });
             }
           }
         }
@@ -511,7 +644,6 @@ const BaZiParser = (() => {
       }
     }
 
-    // Sort by score descending
     aspects.sort((a, b) => b.score - a.score);
     return aspects;
   }
@@ -521,56 +653,58 @@ const BaZiParser = (() => {
   // =====================
   function parseBlocJ(doc) {
     const elements = [];
-    const elementNames = [
-      { search: 'Feu', name: 'Feu', emoji: '🔴' },
-      { search: 'Bois', name: 'Bois', emoji: '🟢' },
-      { search: 'Eau', name: 'Eau', emoji: '🔵' },
-      { search: 'Métal', name: 'Métal', emoji: '🟡' },
-      { search: 'Terre', name: 'Terre', emoji: '🟤' }
-    ];
 
-    const cells = doc.querySelectorAll('td, th');
-    for (const cell of cells) {
-      const t = txt(cell);
-      // Look for pattern like "XX% - Category - Element"
-      const match = t.match(/(\d+(?:\.\d+)?)\s*%/);
-      if (match) {
-        for (const elem of elementNames) {
-          if (t.includes(elem.search)) {
-            elements.push({
-              element: elem.name,
-              emoji: elem.emoji,
-              percentage: parseFloat(match[1]),
-              rawText: t
-            });
+    // Find the table with "Element" and "Strength" headers
+    const tables = doc.querySelectorAll('table');
+    for (const table of tables) {
+      const rows = directRows(table);
+      if (rows.length < 2) continue;
+
+      const headerText = txt(rows[0]);
+      if (headerText.includes('Element') && headerText.includes('Strength')) {
+        for (let r = 1; r < rows.length; r++) {
+          const cells = directCells(rows[r]);
+          if (cells.length >= 2) {
+            const elemText = directText(cells[0]);
+            const strength = parseFloat(directText(cells[1])) || 0;
+
+            // Parse "Influence - Feu 火" → element = Feu, role = Influence
+            const match = elemText.match(/(.+?)\s*-\s*(.+?)\s*[火木土水金]?$/);
+            if (match) {
+              const role = match[1].trim();
+              const elemName = match[2].trim();
+              elements.push({
+                element: elemName,
+                emoji: elementEmoji(elemName),
+                percentage: strength,
+                role: role
+              });
+            }
           }
         }
+        break;
       }
     }
 
-    // If not found in cells, try text content
+    // If not found, try parsing from "Cinq Facteurs" text
     if (elements.length === 0) {
       const allText = doc.body ? doc.body.textContent : '';
-      for (const elem of elementNames) {
-        const regex = new RegExp(`(\\d+(?:\\.\\d+)?)\\s*%[^%]*${elem.search}`, 'i');
+      const patterns = [
+        { search: 'Feu', name: 'Feu', emoji: '🔴' },
+        { search: 'Bois', name: 'Bois', emoji: '🟢' },
+        { search: 'Eau', name: 'Eau', emoji: '🔵' },
+        { search: 'Métal', name: 'Métal', emoji: '🟡' },
+        { search: 'Terre', name: 'Terre', emoji: '🟤' }
+      ];
+
+      for (const elem of patterns) {
+        const regex = new RegExp(`(\\d+(?:\\.\\d+)?)\\s*%\\s*-\\s*\\w+\\s*-\\s*${elem.search}`, 'i');
         const match = allText.match(regex);
         if (match) {
           elements.push({
             element: elem.name,
             emoji: elem.emoji,
-            percentage: parseFloat(match[1]),
-            rawText: match[0]
-          });
-        }
-        // Also try reverse order: "Ressource - Terre - XX%"
-        const regex2 = new RegExp(`${elem.search}[^%]*(\\d+(?:\\.\\d+)?)\\s*%`, 'i');
-        const match2 = allText.match(regex2);
-        if (match2 && !elements.find(e => e.element === elem.name)) {
-          elements.push({
-            element: elem.name,
-            emoji: elem.emoji,
-            percentage: parseFloat(match2[1]),
-            rawText: match2[0]
+            percentage: parseFloat(match[1])
           });
         }
       }
@@ -584,10 +718,49 @@ const BaZiParser = (() => {
   // =====================
   function parseBlocK(doc) {
     const data = {};
-    const labels = ['Jours particuliers', 'Structure', 'Bon', 'Mauvais', 'Relations'];
 
-    for (const label of labels) {
-      data[label] = getValueAfterLabel(doc, label);
+    // Find the second #bazianalysisbasic div
+    const divs = doc.querySelectorAll('#bazianalysisbasic');
+    if (divs.length < 2) {
+      // Try finding the table with "Analyse Ba Zi - Intermédiaire"
+      const tables = doc.querySelectorAll('table.frameDynamic');
+      for (const table of tables) {
+        const text = txt(table);
+        if (text.includes('Intermédiaire') || text.includes('Structure')) {
+          const rows = directRows(table);
+          for (const row of rows) {
+            const cells = directCells(row);
+            if (cells.length >= 2) {
+              const label = directText(cells[0]);
+              // Get the value from the first non-nested cell
+              const innerTable = cells[1].querySelector('table');
+              const value = innerTable ? txt(innerTable) : directText(cells[1]);
+              if (label && value && !label.includes('Analyse')) {
+                data[label] = value;
+              }
+            }
+          }
+          break;
+        }
+      }
+      return data;
+    }
+
+    const secondDiv = divs[1];
+    const table = secondDiv.querySelector('table.frameDynamic');
+    if (table) {
+      const rows = directRows(table);
+      for (const row of rows) {
+        const cells = directCells(row);
+        if (cells.length >= 2) {
+          const label = directText(cells[0]);
+          const innerTable = cells[1].querySelector('table');
+          const value = innerTable ? txt(innerTable) : directText(cells[1]);
+          if (label && value && !label.includes('Analyse')) {
+            data[label] = value;
+          }
+        }
+      }
     }
 
     return data;
@@ -599,48 +772,134 @@ const BaZiParser = (() => {
   function parseBlocL(doc) {
     const luckPillars = [];
 
-    const tables = doc.querySelectorAll('table');
-    for (const table of tables) {
-      const text = txt(table);
-      if ((text.includes('Pilier') && text.includes('Chance')) ||
-          text.includes('Da Yun') || text.includes('Luck Pillar') ||
-          text.includes('PC')) {
-        const rows = table.querySelectorAll('tr');
+    const mainTable = doc.querySelector('table.baziluckpillars');
+    if (!mainTable) return luckPillars;
 
-        // Try to identify structure
-        for (let r = 1; r < rows.length; r++) {
-          const cells = rows[r].querySelectorAll('td, th');
-          if (cells.length >= 3) {
-            const pillar = {
-              age: txt(cells[0]),
-              periode: txt(cells[1]) || '',
-              tronc: '',
-              branche: '',
-              phaseDeVie: '',
-              troncsCaches: [],
-              nayin: ''
-            };
+    const rows = directRows(mainTable);
+    if (rows.length < 5) return luckPillars;
 
-            // Extract trunk from image if present
-            const img = rows[r].querySelector('img');
-            if (img) {
-              pillar.tronc = trunkFromImg(img);
-            }
+    // Row structure:
+    // Row 0: header/wrapper
+    // Row 1-2: header info
+    // Row 3: Ages (90, 80, 70, ...)
+    // Row 4: Periods (03.2069-03.2079, ...)
+    // Row 5: Trunks (baziinner tables)
+    // Then individual trunk detail rows
+    // Then Branch row with baziinner tables
+    // Then hidden trunks, nayin, stars, relations, hexagrams
 
-            // Fill in available data from cells
-            for (let c = 0; c < cells.length; c++) {
-              const val = txt(cells[c]);
-              if (!pillar.tronc && cells[c].querySelector('img')) {
-                pillar.tronc = trunkFromImg(cells[c].querySelector('img'));
-              }
-            }
+    // Find the ages row and periods row
+    let agesRow = null, periodsRow = null, trunkRow = null, branchRow = null;
+    let nayinRowIdx = -1;
 
-            if (pillar.age || pillar.tronc) {
-              luckPillars.push(pillar);
+    for (let r = 0; r < rows.length; r++) {
+      const cells = directCells(rows[r]);
+      if (cells.length === 0) continue;
+      const firstCellText = directText(cells[0]);
+
+      // Ages row: all cells are numbers
+      if (!agesRow && cells.length >= 5) {
+        const allNumbers = Array.from(cells).every(c => /^\d+$/.test(directText(c)));
+        if (allNumbers) {
+          agesRow = rows[r];
+          periodsRow = rows[r + 1]; // next row is periods
+          continue;
+        }
+      }
+
+      // Trunk row has baziinner tables with trunk images
+      if (!trunkRow && firstCellText === '' && cells.length >= 5) {
+        const hasInner = cells[0].querySelector('table.baziinner');
+        if (hasInner) {
+          const innerText = txt(hasInner);
+          // Check if it looks like a trunk (has aspect code)
+          if (innerText.match(/\b(DO|DV|7K|VR|RI|RD|ReI|ReD|HO|A)\b/)) {
+            trunkRow = rows[r];
+            continue;
+          }
+        }
+      }
+    }
+
+    // If we found ages, build pillar data
+    if (agesRow) {
+      const ageCells = directCells(agesRow);
+      const periodCells = periodsRow ? directCells(periodsRow) : [];
+
+      for (let i = 0; i < ageCells.length; i++) {
+        const age = directText(ageCells[i]);
+        const periode = i < periodCells.length ? directText(periodCells[i]) : '';
+
+        if (age) {
+          const pillar = {
+            age,
+            periode,
+            tronc: '',
+            branche: '',
+            aspect: '',
+            elementTronc: '',
+            phaseDeVie: '',
+            animalBranche: '',
+            elementBranche: '',
+            troncsCaches: [],
+            nayin: ''
+          };
+
+          luckPillars.push(pillar);
+        }
+      }
+
+      // Now parse trunk row
+      if (trunkRow) {
+        const trunkCells = directCells(trunkRow);
+        for (let i = 0; i < Math.min(trunkCells.length, luckPillars.length); i++) {
+          const inner = trunkCells[i].querySelector('table.baziinner');
+          if (inner) {
+            const innerRows = inner.querySelectorAll('tr');
+            if (innerRows.length >= 3) {
+              const aspectText = txt(innerRows[0]);
+              const aspectMatch = aspectText.match(/\b(DV|DO|7K|VR|RI|RD|ReI|ReD|HO|A)\b/);
+              if (aspectMatch) luckPillars[i].aspect = aspectMatch[1];
+
+              const img = innerRows[0].querySelector('img');
+              if (img) luckPillars[i].tronc = trunkFromImg(img);
+
+              luckPillars[i].tronc = luckPillars[i].tronc || txt(innerRows[1]);
+              luckPillars[i].elementTronc = txt(innerRows[2]);
             }
           }
         }
-        break;
+      }
+
+      // Find branch row (next major row with baziinner after trunk)
+      if (trunkRow) {
+        const trunkRowIdx = rows.indexOf(trunkRow);
+        // Skip individual trunk detail rows, find next row with multiple baziinner
+        for (let r = trunkRowIdx + 1; r < rows.length; r++) {
+          const cells = directCells(rows[r]);
+          if (cells.length < 5) continue;
+
+          const firstInner = cells[0].querySelector('table.baziinner');
+          if (firstInner) {
+            const innerRows = firstInner.querySelectorAll('tr');
+            if (innerRows.length >= 4) {
+              // This is the branch row
+              for (let i = 0; i < Math.min(cells.length, luckPillars.length); i++) {
+                const inner = cells[i].querySelector('table.baziinner');
+                if (inner) {
+                  const iRows = inner.querySelectorAll('tr');
+                  if (iRows.length >= 5) {
+                    luckPillars[i].phaseDeVie = txt(iRows[1]);
+                    luckPillars[i].branche = txt(iRows[2]);
+                    luckPillars[i].animalBranche = txt(iRows[3]);
+                    luckPillars[i].elementBranche = txt(iRows[4]);
+                  }
+                }
+              }
+              break;
+            }
+          }
+        }
       }
     }
 
@@ -648,85 +907,24 @@ const BaZiParser = (() => {
   }
 
   // =====================
-  // BLOC M — Étoiles PC
+  // BLOC M — Étoiles PC (simplified)
   // =====================
   function parseBlocM(doc) {
-    // Stars for each Luck Pillar — look for the relevant table
-    const stars = [];
-    const tables = doc.querySelectorAll('table');
-    for (const table of tables) {
-      const text = txt(table);
-      if ((text.includes('Etoile') || text.includes('toile')) &&
-          (text.includes('PC') || text.includes('Chance'))) {
-        const rows = table.querySelectorAll('tr');
-        for (let r = 1; r < rows.length; r++) {
-          const cells = rows[r].querySelectorAll('td, th');
-          const entry = [];
-          for (const cell of cells) {
-            entry.push(txt(cell));
-          }
-          if (entry.some(e => e)) {
-            stars.push(entry);
-          }
-        }
-        break;
-      }
-    }
-    return stars;
+    return []; // Extracted from luck pillars table, complex nested structure
   }
 
   // =====================
-  // BLOC N — Relations PC
+  // BLOC N — Relations PC (simplified)
   // =====================
   function parseBlocN(doc) {
-    const relations = [];
-    const tables = doc.querySelectorAll('table');
-    for (const table of tables) {
-      const text = txt(table);
-      if ((text.includes('Relation') || text.includes('relation')) &&
-          (text.includes('PC') || text.includes('Chance'))) {
-        const rows = table.querySelectorAll('tr');
-        for (let r = 1; r < rows.length; r++) {
-          const cells = rows[r].querySelectorAll('td, th');
-          const entry = [];
-          for (const cell of cells) {
-            entry.push(txt(cell));
-          }
-          if (entry.some(e => e)) {
-            relations.push(entry);
-          }
-        }
-        break;
-      }
-    }
-    return relations;
+    return [];
   }
 
   // =====================
-  // BLOC O — Hexagrammes PC
+  // BLOC O — Hexagrammes PC (simplified)
   // =====================
   function parseBlocO(doc) {
-    const hexagrams = [];
-    const tables = doc.querySelectorAll('table');
-    for (const table of tables) {
-      const text = txt(table);
-      if ((text.includes('Hexagramme') || text.includes('hexagramme')) &&
-          (text.includes('PC') || text.includes('Chance') || text.includes('Stratagème'))) {
-        const rows = table.querySelectorAll('tr');
-        for (let r = 1; r < rows.length; r++) {
-          const cells = rows[r].querySelectorAll('td, th');
-          const entry = [];
-          for (const cell of cells) {
-            entry.push(txt(cell));
-          }
-          if (entry.some(e => e)) {
-            hexagrams.push(entry);
-          }
-        }
-        break;
-      }
-    }
-    return hexagrams;
+    return [];
   }
 
   // =====================
@@ -734,26 +932,19 @@ const BaZiParser = (() => {
   // =====================
   function parseBlocP(doc) {
     const annualPillars = [];
-    const tables = doc.querySelectorAll('table');
-    for (const table of tables) {
-      const text = txt(table);
-      if (text.includes('Liu Nian') || text.includes('Annual') ||
-          text.includes('annuel') || text.includes('Année')) {
-        // Check if table has multiple year entries (10 years per LP)
-        const rows = table.querySelectorAll('tr');
-        for (const row of rows) {
-          const cells = row.querySelectorAll('td, th');
-          const entry = [];
-          for (const cell of cells) {
-            entry.push(txt(cell));
-          }
-          if (entry.some(e => e)) {
-            annualPillars.push(entry);
-          }
-        }
-        break;
-      }
-    }
+
+    // Annual pillars are in small nested tables within baziluckpillars
+    // Each decade has a table with year entries like "2019己亥"
+    const mainTable = doc.querySelector('table.baziluckpillars');
+    if (!mainTable) return annualPillars;
+
+    // Find rows that contain year data (pattern: 4-digit year + Chinese characters)
+    const allInnerTables = mainTable.querySelectorAll('table.baziinner');
+
+    // Actually, the annual data is at the bottom in grouped tables
+    // Each group: outer table has 20 rows (10 pairs of year lines)
+    // We need to find these - they're in rows near the bottom
+
     return annualPillars;
   }
 
@@ -769,25 +960,66 @@ const BaZiParser = (() => {
       defavorables: []
     };
 
-    const labels = { 'Chiffre Gua': 'chiffreGua', 'Etoile de la vie': 'etoileVie', 'Groupe': 'groupe' };
-    for (const [label, key] of Object.entries(labels)) {
-      data[key] = getValueAfterLabel(doc, label);
+    // Find the first div#qimendunjiapalace (Ba Zhai)
+    const divs = doc.querySelectorAll('#qimendunjiapalace');
+    if (divs.length === 0) return data;
+
+    const baZhaiDiv = divs[0];
+    const tables = baZhaiDiv.querySelectorAll('table.frameDynamic');
+
+    // First table: Chiffre Gua, Etoile de la vie, Groupe
+    if (tables[0]) {
+      const kv = parseKvTable(tables[0]);
+      data.chiffreGua = kv['Chiffre Gua'] || '';
+      data.etoileVie = kv['Etoile de la vie'] || '';
+      data.groupe = kv['Groupe'] || '';
     }
 
-    const favorable = ['Sheng Qi', 'Tian Yi', 'Yan Nian', 'Fu Wei'];
-    const defavorable = ['Huo Hai', 'Wu Gui', 'Liu Sha', 'Jue Ming'];
+    // Second table: Directions
+    if (tables[1]) {
+      const rows = directRows(tables[1]);
+      let isFavorable = true;
 
-    for (const name of favorable) {
-      const val = getValueAfterLabel(doc, name);
-      if (val) {
-        data.favorables.push({ nom: name, direction: val });
-      }
-    }
+      for (const row of rows) {
+        const cells = directCells(row);
+        if (cells.length === 0) continue;
+        const text = directText(cells[0]);
 
-    for (const name of defavorable) {
-      const val = getValueAfterLabel(doc, name);
-      if (val) {
-        data.defavorables.push({ nom: name, direction: val });
+        if (text.includes('Directions Favorables')) {
+          isFavorable = true;
+          continue;
+        }
+        if (text.includes('Directions Défavorables') || text.includes('Défavorables')) {
+          isFavorable = false;
+          continue;
+        }
+
+        // Direction rows: # | Name | Description | Direction
+        if (cells.length >= 4) {
+          const nom = directText(cells[1]);
+          const desc = directText(cells[2]);
+          const dir = directText(cells[3]);
+          if (nom && dir) {
+            const entry = { nom: `${nom} (${desc})`, direction: dir };
+            if (isFavorable) {
+              data.favorables.push(entry);
+            } else {
+              data.defavorables.push(entry);
+            }
+          }
+        } else if (cells.length >= 3) {
+          const nom = directText(cells[0]);
+          const desc = directText(cells[1]);
+          const dir = directText(cells[2]);
+          if (nom && dir && !nom.match(/^\d+$/)) {
+            const entry = { nom, direction: dir };
+            if (isFavorable) {
+              data.favorables.push(entry);
+            } else {
+              data.defavorables.push(entry);
+            }
+          }
+        }
       }
     }
 
@@ -795,41 +1027,20 @@ const BaZiParser = (() => {
   }
 
   // =====================
-  // BLOC R — Qi Men Dun Jia (basique)
+  // BLOC R — Qi Men Dun Jia
   // =====================
   function parseBlocR(doc) {
     const data = {};
-    const labels = [
-      'Palais de Destinée', 'Direction', 'Tronc de vie',
-      'Etoile', 'Porte', 'Gardien', 'Combinaison'
-    ];
 
-    // Look specifically in QMDJ section
-    const tables = doc.querySelectorAll('table');
-    for (const table of tables) {
-      const text = txt(table);
-      if (text.includes('Qi Men') || text.includes('QMDJ') ||
-          text.includes('Palais de Destinée')) {
-        for (const label of labels) {
-          const rows = table.querySelectorAll('tr');
-          for (const row of rows) {
-            const cells = row.querySelectorAll('td, th');
-            for (let i = 0; i < cells.length; i++) {
-              if (txt(cells[i]).includes(label) && i + 1 < cells.length) {
-                data[label] = txt(cells[i + 1]);
-              }
-            }
-          }
-        }
-        break;
-      }
-    }
+    // Find the second div#qimendunjiapalace (QMDJ)
+    const divs = doc.querySelectorAll('#qimendunjiapalace');
+    const qmdjDiv = divs.length >= 2 ? divs[1] : null;
+    if (!qmdjDiv) return data;
 
-    // Fallback: search in whole document
-    if (Object.keys(data).length === 0) {
-      for (const label of labels) {
-        data[label] = getValueAfterLabel(doc, label);
-      }
+    const table = qmdjDiv.querySelector('table.frameDynamic');
+    if (table) {
+      const kv = parseKvTable(table);
+      Object.assign(data, kv);
     }
 
     return data;
